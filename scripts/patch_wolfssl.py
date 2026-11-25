@@ -14,6 +14,9 @@ OVERRIDES = f"""
 #endif
 #undef FP_MAX_BITS
 #define FP_MAX_BITS 8192
+#ifndef WC_RC2
+#define WC_RC2
+#endif
 /* Arduino-wolfSSL turns on DEBUG_WOLFSSL, which compiles every WOLFSSL_MSG and
    WOLFSSL_ENTER trace string into flash. Keep it only for FREEINK_WOLFSSL_DEBUG. */
 #ifndef FREEINK_WOLFSSL_DEBUG
