@@ -101,6 +101,8 @@ void forEachBaseSetting(SettingVisitor visitor, void* context) {
       StrId::STR_ROTATION_DELAY, &CrossPointSettings::autoRotateDelay,
       {StrId::STR_ROTATION_DELAY_SHORT, StrId::STR_SENSITIVITY_NORMAL, StrId::STR_ROTATION_DELAY_LONG},
       "autoRotateDelay", StrId::STR_CAT_READER));
+  add(SettingInfo::Toggle(StrId::STR_AUTO_ROTATE_UPSIDE_DOWN, &CrossPointSettings::autoRotateUpsideDown,
+                          "autoRotateUpsideDown", StrId::STR_CAT_READER));
   add(SettingInfo::Submenu(StrId::STR_SCREEN_MARGIN, SettingAction::ScreenMargin));
   add(SettingInfo::Value(StrId::STR_TOP_BOTTOM, &CrossPointSettings::screenMarginVertical,
                          {CrossPointSettings::MIN_SCREEN_MARGIN, CrossPointSettings::MAX_SCREEN_MARGIN,

@@ -145,10 +145,11 @@ TEST(ReaderDrawerModel, CatalogOrderAndConditionalRowsMatchTouchDesign) {
   sensorAvailable.hasMotionSensor = true;
   const ReaderDrawerCatalog sensorCatalog = makeReaderDrawerCatalog(sensorAvailable);
   const auto& sensorLayout = sensorCatalog[static_cast<size_t>(ReaderDrawerTab::Layout)];
-  EXPECT_EQ(sensorLayout.count, 11);
+  EXPECT_EQ(sensorLayout.count, 12);
   EXPECT_EQ(sensorLayout.items[1], ReaderDrawerCatalogItem::Orientation);
   EXPECT_EQ(sensorLayout.items[2], ReaderDrawerCatalogItem::AutoRotate);
   EXPECT_EQ(sensorLayout.items[3], ReaderDrawerCatalogItem::RotationDelay);
+  EXPECT_EQ(sensorLayout.items[4], ReaderDrawerCatalogItem::AutoRotateUpsideDown);
 
   const auto& minimalLocation = minimal[static_cast<size_t>(ReaderDrawerTab::Location)];
   EXPECT_EQ(minimalLocation.count, 4);

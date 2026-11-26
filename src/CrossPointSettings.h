@@ -585,6 +585,9 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Follow the device when it is turned upside down and/or sideways in a reader.
   uint8_t autoRotate = AUTO_ROTATE_OFF;
   uint8_t autoRotateDelay = AUTO_ROTATE_DELAY_NORMAL;
+  // 0: auto-rotate never shows the page upside down (portrait turned 180°);
+  // that position shows normal portrait instead.
+  uint8_t autoRotateUpsideDown = 1;
   // Legacy layouts are retained for migration only.
   uint8_t frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
   uint8_t sideButtonLayout = PREV_NEXT;

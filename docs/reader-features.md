@@ -464,6 +464,11 @@ or Long (1.6 s / 3 s). It shows as Disabled while Auto-Rotate is off.
 When it turns the page, a **Rotating** notice shows until the page is drawn
 again in the new direction.
 
+**Upside Down** (on by default) allows the page to turn upside down when you
+hold portrait the other way up. Turn it off if you never read that way: that
+position then shows normal portrait. Flips between the two landscape directions
+still work.
+
 How it behaves:
 
 - It starts working on its own when you open a book or wake the reader. Each
