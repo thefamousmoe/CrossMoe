@@ -2014,6 +2014,11 @@ void loop() {
   if (!buttonShortcutController.isQuickLocked()) {
     halTiltSensor.update(SETTINGS.tiltPageTurn, SETTINGS.tiltPageTurnDirection, SETTINGS.orientation,
                          activityManager.isReaderActivity(), SETTINGS.tiltSensitivity);
+#ifndef SIMULATOR  // the simulator's stand-in sensor has no auto-rotate
+    // Pressing a button in a book means the page is being read upright as the
+    // device is held now; auto-rotate measures later turns from there.
+    if (activityManager.isReaderActivity() && mappedInputManager.wasAnyReleased()) halTiltSensor.anchorAutoRotate();
+#endif
   }
 
   renderer.setFadingFix(SETTINGS.fadingFix && CrossPointSettings::fadingFixSupported());

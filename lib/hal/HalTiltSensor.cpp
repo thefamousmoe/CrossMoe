@@ -4,15 +4,6 @@
 
 HalTiltSensor halTiltSensor;  // Singleton instance
 
-bool HalTiltSensor::readGyro(float& gx, float& gy, float& gz) const {
-  Imu::Sample sample;
-  if (!_sdkImu.read(sample)) return false;
-  gx = sample.gx;
-  gy = sample.gy;
-  gz = sample.gz;
-  return true;
-}
-
 void HalTiltSensor::begin() {
 #ifdef FORCE_TILT_SENSOR_AVAILABLE
   _available = true;
@@ -68,9 +59,24 @@ bool HalTiltSensor::deepSleep() {
   }
 
   clearPendingEvents();
+  resetAutoRotate();
   _inTilt = false;
   _isAwake = false;
   return true;
+}
+
+void HalTiltSensor::setAutoRotate(const uint8_t mode, const unsigned long flipHoldMs,
+                                  const unsigned long sidewaysHoldMs) {
+  if (mode != _autoRotateMode) resetAutoRotate();
+  _autoRotateMode = mode;
+  _flipHoldMs = flipHoldMs;
+  _sidewaysHoldMs = sidewaysHoldMs;
+}
+
+uint8_t HalTiltSensor::takeAutoRotateTurns() {
+  const uint8_t turns = _pendingQuarterTurns;
+  _pendingQuarterTurns = 0;
+  return turns;
 }
 
 void HalTiltSensor::update(const uint8_t enabled, const uint8_t direction, const uint8_t orientation,
@@ -79,9 +85,11 @@ void HalTiltSensor::update(const uint8_t enabled, const uint8_t direction, const
     return;
   }
 
-  const bool shouldBeAwake = (enabled != CrossPointTiltPageTurn::TILT_OFF) && inReader;
+  const bool tiltEnabled = enabled != CrossPointTiltPageTurn::TILT_OFF;
+  const bool autoRotateEnabled = _autoRotateMode != 0;
+  const bool shouldBeAwake = (tiltEnabled || autoRotateEnabled) && inReader;
 
-  // State machine: keep the sensor awake only while tilt is enabled in a reader.
+  // State machine: keep the sensor awake only while a reader needs it.
   if (shouldBeAwake && !_isAwake) {
     _isAwake = wake();
     return;
@@ -106,10 +114,31 @@ void HalTiltSensor::update(const uint8_t enabled, const uint8_t direction, const
   }
   _lastPollMs = now;
 
-  float gx, gy, gz;
-  if (!readGyro(gx, gy, gz)) {
+  Imu::Sample sample;
+  if (!_sdkImu.read(sample)) {
     return;
   }
+
+  if (tiltEnabled) {
+    updateTiltGesture(sample, direction, orientation, sensitivity, now);
+  }
+
+  if (autoRotateEnabled) {
+    const float gyroDps = fmaxf(fabsf(sample.gx), fmaxf(fabsf(sample.gy), fabsf(sample.gz)));
+    const AutoRotateDetector::Sample reading{sample.ax, sample.ay, sample.az, gyroDps, now};
+    const uint8_t turns = _autoRotate.update(reading, _autoRotateMode >= 2, _flipHoldMs, _sidewaysHoldMs);
+    if (turns != 0) {
+      _pendingQuarterTurns = turns;
+      LOG_INF("GYR", "Auto-rotate: %u quarter turn(s), accel=(%.2f, %.2f, %.2f)", turns, sample.ax, sample.ay,
+              sample.az);
+    }
+  }
+}
+
+void HalTiltSensor::updateTiltGesture(const Imu::Sample& sample, const uint8_t direction, const uint8_t orientation,
+                                      const uint8_t sensitivity, const unsigned long now) {
+  const float gx = sample.gx;
+  const float gy = sample.gy;
 
   // Map the gyro axis to the selected gesture based on reader orientation.
   // On the X3 PCB: X axis = left/right in portrait, Y axis = left/right in landscape.
@@ -158,12 +187,14 @@ void HalTiltSensor::update(const uint8_t enabled, const uint8_t direction, const
         _hadActivity = true;
         _inTilt = true;
         _lastTiltMs = now;
+        _autoRotate.interrupt();
         LOG_INF("GYR", "Forward Trigger=(%.1f) dps", tiltAxis);
       } else if (tiltAxis < -rateThreshold) {
         _tiltBackEvent = true;
         _hadActivity = true;
         _inTilt = true;
         _lastTiltMs = now;
+        _autoRotate.interrupt();
         LOG_INF("GYR", "Backward Trigger=(%.1f) dps", tiltAxis);
       }
     }

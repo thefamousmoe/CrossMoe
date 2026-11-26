@@ -69,6 +69,7 @@
 #include "ProgressMapper.h"
 #include "QrDisplayActivity.h"
 #include "QuickActions.h"
+#include "ReaderAutoRotate.h"
 #include "ReaderFontLoading.h"
 #include "ReaderRefreshScope.h"
 #include "ReaderRuling.h"
@@ -2542,6 +2543,7 @@ bool EpubReaderActivity::usesMenuButtonOrientation() const {
 
 void EpubReaderActivity::onEnter() {
   Activity::onEnter();
+  ReaderAutoRotate::onReaderEnter();
   pageLoadRetryCount = 0;
   touchReaderDrawerState = initialReaderDrawerState(mappedInput.hasTouchHardware());
 
@@ -3864,6 +3866,12 @@ void EpubReaderActivity::loop() {
     // Reader long-press actions execute while Power is still held. Consume its
     // later release so the app-wide shortcut dispatcher cannot run it again.
     mappedInput.suppressNextPowerRelease();
+    return;
+  }
+
+  if (const int autoOrientation = ReaderAutoRotate::poll(SETTINGS.orientation); autoOrientation >= 0) {
+    applyOrientation(static_cast<uint8_t>(autoOrientation));
+    requestUpdate();
     return;
   }
 

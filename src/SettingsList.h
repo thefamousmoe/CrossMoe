@@ -81,12 +81,17 @@ inline bool settingKeyIs(const SettingInfo& setting, const char* key) {
   return setting.key && std::strcmp(setting.key, key) == 0;
 }
 
+// Settings that need the motion sensor; hidden on devices without one.
 inline bool isTiltPageTurnSetting(const SettingInfo& setting) {
   return settingKeyIs(setting, "tiltPageTurn") || settingKeyIs(setting, "tiltPageTurnDirection") ||
-         settingKeyIs(setting, "tiltNextPageOnly") || settingKeyIs(setting, "tiltSensitivity");
+         settingKeyIs(setting, "tiltNextPageOnly") || settingKeyIs(setting, "tiltSensitivity") ||
+         settingKeyIs(setting, "autoRotate") || settingKeyIs(setting, "autoRotateDelay");
 }
 
+// Shown greyed out as "Disabled" while the setting they depend on is off.
 inline bool isPageGestureSettingDisabled(const SettingInfo& setting) {
+  if (setting.valuePtr == &CrossPointSettings::autoRotateDelay)
+    return SETTINGS.autoRotate == CrossPointSettings::AUTO_ROTATE_OFF;
   return SETTINGS.disablePageTurnGestures && (setting.valuePtr == &CrossPointSettings::pageTurnGesture ||
                                               setting.valuePtr == &CrossPointSettings::previousPageGesture);
 }
@@ -887,8 +892,10 @@ inline std::vector<SettingInfo> buildReaderFontSettingsList(const std::vector<Se
 
 inline std::vector<SettingInfo> buildReaderPageLayoutSettingsList(const std::vector<SettingInfo>& allSettings) {
   std::vector<SettingInfo> settings;
-  settings.reserve(7);
+  settings.reserve(9);
   addSettingByName(settings, allSettings, StrId::STR_ORIENTATION);
+  addSettingByName(settings, allSettings, StrId::STR_AUTO_ROTATE);
+  addSettingByName(settings, allSettings, StrId::STR_ROTATION_DELAY);
   addSettingByName(settings, allSettings, StrId::STR_SCREEN_MARGIN);
   addSettingByName(settings, allSettings, StrId::STR_PARA_ALIGNMENT);
   addSettingByName(settings, allSettings, StrId::STR_HYPHENATION);

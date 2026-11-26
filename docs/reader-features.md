@@ -434,6 +434,39 @@ finished books: **Move Finished Books to Read Folder** moves them to `/Read/` on
 the SD card, and **Clear Finished Books from History** removes a book from your
 recent books once you reach its end.
 
+## Auto-Rotate
+
+On readers with a motion sensor (such as the Xteink X3), EPUB and TXT books can
+follow the way you hold the device. Turn it on in **Settings > Reader > Page
+Layout > Auto-Rotate**:
+
+- **Off**: the page only rotates when you choose an orientation.
+- **Flip only**: turning the device upside down flips the page, for example
+  when you switch hands.
+- **Flip and sideways**: turning it sideways also switches between portrait and
+  landscape. Landscape needs the chapter to be laid out again, so expect a few
+  seconds of **Loading** the first time.
+
+**Rotation Delay** sets how long the device must rest in its new position
+before the page turns: Short (0.6 s flip, 1.2 s sideways), Normal (1 s / 2 s)
+or Long (1.6 s / 3 s). It shows as Disabled while Auto-Rotate is off.
+
+How it behaves:
+
+- It starts working after you press any button in the book, such as turning a
+  page. That tells it which way up you are reading.
+- It ignores the device while it lies flat (on a table, or face-up in bed) and
+  while it is moving.
+- Choosing an orientation by hand pauses auto-rotate until your next button
+  press, so it does not undo your choice.
+- If a sideways turn ever comes out upside down, use **Rotate Page 180°**
+  within 20 seconds. The reader remembers the correction for future turns.
+- Turn on **Orientation Aware** for the front and side buttons in Controls so
+  the page-turn buttons follow the rotated page.
+
+The motion sensor stays on while a book is open with Auto-Rotate enabled, which
+uses slightly more battery.
+
 ## Reader Controls And Shortcuts
 
 CrossInk adds reader-focused control options beyond the default button mappings.

@@ -121,6 +121,14 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     ORIENTATION_COUNT
   };
 
+  // Reader auto-rotate from the motion sensor (IMU devices only).
+  enum AUTO_ROTATE : uint8_t { AUTO_ROTATE_OFF = 0, AUTO_ROTATE_FLIP_ONLY = 1, AUTO_ROTATE_ALL = 2 };
+  enum AUTO_ROTATE_DELAY : uint8_t {
+    AUTO_ROTATE_DELAY_SHORT = 0,
+    AUTO_ROTATE_DELAY_NORMAL = 1,
+    AUTO_ROTATE_DELAY_LONG = 2
+  };
+
   // Front button layout options (legacy)
   // Default: Back, Confirm, Left, Right
   // Swapped: Left, Right, Back, Confirm
@@ -574,6 +582,9 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // EPUB reading orientation settings
   // 0 = portrait (default), 1 = landscape clockwise, 2 = inverted, 3 = landscape counter-clockwise
   uint8_t orientation = PORTRAIT;
+  // Follow the device when it is turned upside down and/or sideways in a reader.
+  uint8_t autoRotate = AUTO_ROTATE_OFF;
+  uint8_t autoRotateDelay = AUTO_ROTATE_DELAY_NORMAL;
   // Legacy layouts are retained for migration only.
   uint8_t frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
   uint8_t sideButtonLayout = PREV_NEXT;

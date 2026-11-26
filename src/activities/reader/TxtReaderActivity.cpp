@@ -18,6 +18,7 @@
 #include "GlobalActions.h"
 #include "MappedInputManager.h"
 #include "QuickActions.h"
+#include "ReaderAutoRotate.h"
 #include "ReaderRefreshScope.h"
 #include "ReaderRuling.h"
 #include "ReaderUtils.h"
@@ -141,6 +142,7 @@ size_t TxtReaderActivity::parseAndWrapLines(const uint8_t* buffer, size_t chunkS
 
 void TxtReaderActivity::onEnter() {
   Activity::onEnter();
+  ReaderAutoRotate::onReaderEnter();
   ReaderUtils::applyOrientation(renderer, SETTINGS.orientation);
   showOpeningFeedback();
 
@@ -327,6 +329,11 @@ void TxtReaderActivity::loop() {
         }
       }
     }
+    return;
+  }
+
+  if (const int autoOrientation = ReaderAutoRotate::poll(SETTINGS.orientation); autoOrientation >= 0) {
+    applyReaderOrientation(static_cast<uint8_t>(autoOrientation));
     return;
   }
 

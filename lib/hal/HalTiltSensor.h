@@ -4,6 +4,8 @@
 #include <Imu.h>
 #include <TiltSensitivity.h>
 
+#include "AutoRotateDetector.h"
+
 // TODO: Move enums into new header and share with CrossPointSettings.h
 namespace CrossPointOrientation {
 enum Value : uint8_t { PORTRAIT = 0, LANDSCAPE_CW = 1, INVERTED = 2, LANDSCAPE_CCW = 3 };
@@ -52,7 +54,15 @@ class HalTiltSensor {
 
   mutable unsigned long _lastPollMs = 0;
 
-  bool readGyro(float& gx, float& gy, float& gz) const;
+  // Auto-rotate (see setAutoRotate()). Off unless a reader enables it.
+  AutoRotateDetector _autoRotate;
+  uint8_t _autoRotateMode = 0;  // 0 off, 1 upside-down flips only, 2 flips and sideways
+  unsigned long _flipHoldMs = 1000;
+  unsigned long _sidewaysHoldMs = 2000;
+  uint8_t _pendingQuarterTurns = 0;  // consumed by takeAutoRotateTurns()
+
+  void updateTiltGesture(const Imu::Sample& sample, uint8_t direction, uint8_t orientation, uint8_t sensitivity,
+                         unsigned long now);
 
  public:
   // Call after BoardConfig has selected the active device.
@@ -67,9 +77,29 @@ class HalTiltSensor {
   // True if an IMU is present on this device
   bool isAvailable() const { return _available; }
 
-  // Poll the accelerometer and update tilt gesture state.
+  // Poll the sensor and update tilt gesture and auto-rotate state. The sensor
+  // runs only inside a reader, and only while tilt or auto-rotate is enabled.
   void update(const uint8_t enabled, const uint8_t direction, const uint8_t orientation, const bool inReader,
               const uint8_t sensitivity = TiltSensitivity::NORMAL);
+
+  // Auto-rotate configuration, applied on the next update(). mode: 0 off,
+  // 1 upside-down flips only, 2 flips and sideways turns. Hold times are how
+  // long the device must rest in the new position before it counts.
+  void setAutoRotate(uint8_t mode, unsigned long flipHoldMs, unsigned long sidewaysHoldMs);
+
+  // Quarter turns (1-3) the device was turned since the anchored position, in
+  // the sensor's frame, or 0. Consumed on read.
+  uint8_t takeAutoRotateTurns();
+
+  // Pairs the current resting position with the page now on screen. Call on a
+  // button page turn: the reader is evidently holding the page upright.
+  void anchorAutoRotate() { _autoRotate.anchorToCurrentPosition(); }
+
+  // Forgets the anchored position, e.g. after the orientation was changed by hand.
+  void resetAutoRotate() {
+    _autoRotate.reset();
+    _pendingQuarterTurns = 0;
+  }
 
   // Returns true once per tilt-forward gesture (next page direction).
   // Consumed on read — subsequent calls return false until next gesture.
