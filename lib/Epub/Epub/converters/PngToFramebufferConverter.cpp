@@ -229,7 +229,7 @@ void mappedPngRow(void* user, int dstY, const uint8_t* levels, int width) {
   for (int x = 0; x < width; ++x) {
     const int outX = ctx->config->x + x;
     const uint8_t value = ctx->config->finalMonochrome ? levels[x] * 3 : levels[x];
-    if (outX >= 0 && outX < ctx->screenWidth && outY >= 0 && outY < ctx->screenHeight) {
+    if (!ctx->config->cacheOnly && outX >= 0 && outX < ctx->screenWidth && outY >= 0 && outY < ctx->screenHeight) {
       pw.writePixel(outX, value);
     }
     // Cache all image pixels even when the live framebuffer clips the row.
@@ -292,8 +292,9 @@ int pngDrawCallback(PNGDRAW* pDraw) {
   for (int dstY = firstDstY; dstY < endDstY; dstY++) {
     ctx->lastDstY = dstY;
     int outY = ctx->config->y + dstY;
-    // Rows above the screen occur when the zoom viewer pans down a large image.
-    if (outY < 0 || outY >= ctx->screenHeight) continue;
+    // A cache-only decode writes every row to the cache and nothing to the screen.
+    const bool drawRow = !ctx->config->cacheOnly && outY >= 0 && outY < ctx->screenHeight;
+    if (!drawRow && !(ctx->config->cacheOnly && ctx->caching)) continue;
 
     pw.beginRow(outY);
 
@@ -318,13 +319,14 @@ int pngDrawCallback(PNGDRAW* pDraw) {
 
     for (int dstX = 0; dstX < dstWidth; dstX++) {
       int outX = outXBase + dstX;
-      if (outX >= 0 && outX < screenWidth) {
+      const bool onScreen = outX >= 0 && outX < screenWidth;
+      if ((drawRow && onScreen) || (caching && ctx->config->cacheOnly)) {
         uint8_t gray = ctx->grayLineBuffer[srcX];
 
         const uint8_t ditheredGray = ctx->config->finalMonochrome ? quantizeGrayToMono(gray, dstX, dstY, useDithering)
                                      : useDithering               ? applyBayerDither4Level(gray, outX, outY)
                                                                   : quantizeGrayTo4Level(gray);
-        pw.writePixel(outX, ditheredGray);
+        if (drawRow && onScreen) pw.writePixel(outX, ditheredGray);
         if (caching) cw.writePixel(outX, ditheredGray);
       }
 

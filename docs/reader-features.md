@@ -213,26 +213,36 @@ image preferences are preserved.
 ### Zoom Image
 
 **Zoom Image** opens the largest picture on the current page full screen, so
-maps and diagrams can be read in detail. Add it to **Quick Actions**, or assign
-it to a button press under **Settings > Controls** (power, side buttons, front
-long-press or long-press Back/Menu).
+maps and diagrams can be read in detail. Open it from the Reader Menu's **More**
+tab, add it to **Quick Actions**, or assign it to a button press under
+**Settings > Controls** (power, side buttons, front long-press or long-press
+Back/Menu).
 
 In the viewer:
 
-- **Confirm** zooms in: fitted, 2x, 3x, 4x, then back to fitted.
+- **Confirm** zooms in: fitted, 2x, 3x, 4x, then back to fitted. Zooming stops
+  at the picture's own level of detail, so small pictures may only offer 2x or
+  3x.
 - **Left/Right** and **Up/Down** move around the zoomed picture. If the picture
   only extends in one direction, every direction button moves along it.
 - **Back** returns to the book.
 
-The viewer draws in black and white so each move is a single quick decode.
+The first time you open each zoom level, the viewer shows **Loading** while it
+decodes the whole picture in shades of gray and saves it to a temporary file
+on the SD card. Moving around that level then reads straight from the file, so
+pans are quick and look as sharp as the page. The temporary files are deleted
+when you leave the viewer. If the file can't be written, the viewer falls back
+to drawing each view in black and white.
+
 JPEG and PNG pictures can be zoomed; other formats are shown fitted to the
 screen.
 
 ## Search Book
 
 **Search Book** finds every place a name or phrase appears in the book, much
-like looking up a character in an X-Ray panel. Add it to **Quick Actions** or
-assign it to a button press under **Settings > Controls**.
+like looking up a character in an X-Ray panel. Open it from the Reader Menu's
+**More** tab, add it to **Quick Actions**, or assign it to a button press under
+**Settings > Controls**.
 
 1. Trigger **Search Book**. The word picker opens on the current page.
 2. Move to a word and press **Confirm**, or hold **Confirm** to select a

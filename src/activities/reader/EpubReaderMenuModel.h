@@ -35,6 +35,8 @@ enum class EpubReaderMenuAction : uint8_t {
   SET_BOOK_DICTIONARY,
   STATUS_BAR_SETTINGS,
   RESET_BOOK_READER_SETTINGS,
+  ZOOM_IMAGE,
+  SEARCH_BOOK,
 };
 
 enum class ReaderDrawerTab : uint8_t { Font = 0, Layout = 1, More = 2, Location = 3, Settings = 4, Count };
@@ -157,6 +159,8 @@ enum class ReaderDrawerCatalogItem : uint8_t {
   NearbyPositionSync,
   SendNearbyBook,
   BookWordHoldAction,
+  SearchBook,
+  ZoomImage,
 };
 
 struct ReaderDrawerAvailability {
@@ -214,6 +218,8 @@ constexpr ReaderDrawerCatalog makeReaderDrawerCatalog(const ReaderDrawerAvailabi
     more.add(ReaderDrawerCatalogItem::Lookup);
     more.add(ReaderDrawerCatalogItem::LookupHistory);
   }
+  more.add(ReaderDrawerCatalogItem::SearchBook);
+  more.add(ReaderDrawerCatalogItem::ZoomImage);
   more.add(ReaderDrawerCatalogItem::SelectChapter);
   more.add(ReaderDrawerCatalogItem::GoToPercent);
   if (available.hasStablePageNumbers) more.add(ReaderDrawerCatalogItem::GoToStablePage);

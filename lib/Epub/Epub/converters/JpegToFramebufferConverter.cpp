@@ -222,15 +222,18 @@ int jpegDrawCallback(JPEGDRAW* pDraw) {
   int dstXStart = (int)((int64_t)blockX * fineScaleFPX >> FP_SHIFT);
   int dstXEnd = (srcXEnd >= ctx->scaledSrcWidth) ? ctx->dstWidth : (int)((int64_t)srcXEnd * fineScaleFPX >> FP_SHIFT);
 
-  // Pre-clamp destination ranges to screen bounds (eliminates per-pixel screen checks)
+  // Pre-clamp destination ranges to screen bounds (eliminates per-pixel screen checks).
+  // A cache-only decode keeps the whole image and never touches the framebuffer.
+  const bool drawToScreen = !ctx->config->cacheOnly;
   int clampYMax = ctx->dstHeight;
-  if (ctx->screenHeight - cfgY < clampYMax) clampYMax = ctx->screenHeight - cfgY;
-  if (dstYStart < -cfgY) dstYStart = -cfgY;
-  if (dstYEnd > clampYMax) dstYEnd = clampYMax;
-
   int clampXMax = ctx->dstWidth;
-  if (ctx->screenWidth - cfgX < clampXMax) clampXMax = ctx->screenWidth - cfgX;
-  if (dstXStart < -cfgX) dstXStart = -cfgX;
+  if (drawToScreen) {
+    if (ctx->screenHeight - cfgY < clampYMax) clampYMax = ctx->screenHeight - cfgY;
+    if (dstYStart < -cfgY) dstYStart = -cfgY;
+    if (ctx->screenWidth - cfgX < clampXMax) clampXMax = ctx->screenWidth - cfgX;
+    if (dstXStart < -cfgX) dstXStart = -cfgX;
+  }
+  if (dstYEnd > clampYMax) dstYEnd = clampYMax;
   if (dstXEnd > clampXMax) dstXEnd = clampXMax;
 
   if (dstYStart >= dstYEnd || dstXStart >= dstXEnd) return 1;
@@ -267,7 +270,7 @@ int jpegDrawCallback(JPEGDRAW* pDraw) {
         const int outX = cfgX + dstX;
         uint8_t gray = row[dstX - blockX];
         const uint8_t dithered = quantize(gray, outX, outY);
-        pw.writePixel(outX, dithered);
+        if (drawToScreen) pw.writePixel(outX, dithered);
         if (caching) cw.writePixel(outX, dithered);
       }
     }
@@ -320,7 +323,7 @@ int jpegDrawCallback(JPEGDRAW* pDraw) {
         uint8_t gray = (uint8_t)((top * fyInv + bot * fy) >> FP_SHIFT);
 
         const uint8_t dithered = quantize(gray, outX, outY);
-        pw.writePixel(outX, dithered);
+        if (drawToScreen) pw.writePixel(outX, dithered);
         if (caching) cw.writePixel(outX, dithered);
       }
 
@@ -337,7 +340,7 @@ int jpegDrawCallback(JPEGDRAW* pDraw) {
         uint8_t gray = (uint8_t)((top * fyInv + bot * fy) >> FP_SHIFT);
 
         const uint8_t dithered = quantize(gray, outX, outY);
-        pw.writePixel(outX, dithered);
+        if (drawToScreen) pw.writePixel(outX, dithered);
         if (caching) cw.writePixel(outX, dithered);
       }
 
@@ -357,7 +360,7 @@ int jpegDrawCallback(JPEGDRAW* pDraw) {
         uint8_t gray = (uint8_t)((top * fyInv + bot * fy) >> FP_SHIFT);
 
         const uint8_t dithered = quantize(gray, outX, outY);
-        pw.writePixel(outX, dithered);
+        if (drawToScreen) pw.writePixel(outX, dithered);
         if (caching) cw.writePixel(outX, dithered);
       }
     }
@@ -384,7 +387,7 @@ int jpegDrawCallback(JPEGDRAW* pDraw) {
       uint8_t gray = row[lx];
 
       const uint8_t dithered = quantize(gray, outX, outY);
-      pw.writePixel(outX, dithered);
+      if (drawToScreen) pw.writePixel(outX, dithered);
       if (caching) cw.writePixel(outX, dithered);
     }
   }

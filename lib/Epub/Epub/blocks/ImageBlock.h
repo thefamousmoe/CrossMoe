@@ -41,6 +41,14 @@ class ImageBlock final : public Block {
   // be negative: the decoders clip to the screen, so this draws one viewport of
   // a larger-than-screen image. Never reads or writes the page pixel cache.
   bool renderScaled(GfxRenderer& renderer, int x, int y, int drawWidth, int drawHeight, bool grayscale) const;
+  // Zoom viewer cache: decode the whole image once at drawWidth x drawHeight
+  // into a 2-bit gray file on the SD card, then draw any screen-sized window of
+  // it without decoding again.
+  bool buildZoomCache(GfxRenderer& renderer, const std::string& cachePath, int drawWidth, int drawHeight) const;
+  static bool renderZoomCache(GfxRenderer& renderer, const std::string& cachePath, int x, int y, int drawWidth,
+                              int drawHeight);
+  // Pixel size of the original picture, for capping zoom at its real detail.
+  bool sourceDimensions(int& width, int& height) const;
   bool serialize(Print& file);
   static std::unique_ptr<ImageBlock> deserialize(FsFile& file);
 

@@ -21,19 +21,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # This fork only needs the Xteink X3 firmware (the "default" X3/X4 build).
         include:
           - environment: default
             firmware: firmware-x3-x4
-          - environment: sticky
-            firmware: firmware-sticky
-          - environment: x4-pro
-            firmware: firmware-x4-pro
-          - environment: x4-classic
-            firmware: firmware-x4-classic
-          - environment: picco
-            firmware: firmware-picco
-          - environment: eego_a4
-            firmware: firmware-eego_a4
     env:
       RC_BRANCH: ${{ github.ref_name }}
       RC_HASH: ${{ inputs.source_commit || github.sha }}
@@ -99,7 +90,9 @@ jobs:
             sdkconfig.${{ matrix.environment }}
           if-no-files-found: error
 
+  # Publishing needs the upstream project's release secrets, so a fork skips it.
   prepare-language-assets:
+    if: ${{ !github.event.repository.fork }}
     needs: build-release-candidate
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -119,7 +112,7 @@ jobs:
         run: python3 scripts/prepare_release_downloads.py --tag "$RELEASE_TAG" --source-commit "$SOURCE_COMMIT"
 
   publish-release-candidate:
-    if: startsWith(github.ref_name, 'release/')
+    if: ${{ startsWith(github.ref_name, 'release/') && !github.event.repository.fork }}
     needs:
       - build-release-candidate
       - prepare-language-assets

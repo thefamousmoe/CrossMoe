@@ -1971,6 +1971,12 @@ void EpubReaderDrawerActivity::activateRow(const RowId row) {
     case RowId::LookupHistory:
       action = EpubReaderMenuAction::LOOKUP_HISTORY;
       break;
+    case RowId::SearchBook:
+      action = EpubReaderMenuAction::SEARCH_BOOK;
+      break;
+    case RowId::ZoomImage:
+      action = EpubReaderMenuAction::ZOOM_IMAGE;
+      break;
     case RowId::SaveClipping:
       action = EpubReaderMenuAction::SAVE_CLIPPING;
       break;
@@ -3260,6 +3266,10 @@ const char* EpubReaderDrawerActivity::rowLabel(const RowId row) const {
       return tr(STR_LOOKUP);
     case RowId::LookupHistory:
       return tr(STR_LOOKUP_HISTORY);
+    case RowId::SearchBook:
+      return tr(STR_SEARCH_BOOK);
+    case RowId::ZoomImage:
+      return tr(STR_ZOOM_IMAGE);
     case RowId::SaveClipping:
       return tr(STR_SAVE_CLIPPING);
     case RowId::ViewClippings:
@@ -3478,6 +3488,8 @@ bool EpubReaderDrawerActivity::rowShowsNavigationCaret(const RowId row) const {
     case RowId::Screenshot:
     case RowId::DisplayQr:
     case RowId::Lookup:
+    case RowId::SearchBook:
+    case RowId::ZoomImage:
     case RowId::SaveClipping:
     case RowId::ResetReadingPace:
     case RowId::ResetBookReaderSettings:

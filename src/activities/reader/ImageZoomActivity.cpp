@@ -3,18 +3,22 @@
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
+#include <HalStorage.h>
 #include <I18n.h>
 #include <Logging.h>
 
 #include <algorithm>
 #include <cstdio>
 
+#include "activities/util/ImageViewerGrayscale.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
 namespace {
-// Keep the zoomed image within sizes the decoders handle comfortably.
+// Keep the zoomed image within sizes the decoders and the 16-bit cache header handle.
 constexpr int MAX_ZOOMED_EDGE = 6144;
+// Allow a little enlargement past the picture's own pixels before stopping.
+constexpr int NATIVE_OVERZOOM_PERCENT = 125;
 }  // namespace
 
 ImageZoomActivity::ImageZoomActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
@@ -23,16 +27,42 @@ ImageZoomActivity::ImageZoomActivity(GfxRenderer& renderer, MappedInputManager& 
 
 void ImageZoomActivity::onEnter() {
   Activity::onEnter();
+
+  // Cap zooming at the picture's real detail. Unknown size keeps the default cap.
+  int sourceWidth = 0;
+  int sourceHeight = 0;
+  if (canZoom() && image->sourceDimensions(sourceWidth, sourceHeight)) {
+    int fitWidth = 0;
+    int fitHeight = 0;
+    zoomedSize(1, fitWidth, fitHeight);
+    const int levels = sourceWidth * NATIVE_OVERZOOM_PERCENT / 100 / std::max(1, fitWidth);
+    maxZoom = std::clamp(levels, 1, MAX_ZOOM);
+    LOG_INF("ZOOM", "Source %dx%d, fitted %dx%d, max zoom %dx", sourceWidth, sourceHeight, fitWidth, fitHeight,
+            maxZoom);
+  }
   requestRedraw(true);
 }
 
-void ImageZoomActivity::onExit() { Activity::onExit(); }
+void ImageZoomActivity::onExit() {
+  // The cached levels are only useful while this picture is open; free the SD space.
+  for (int level = 1; level <= MAX_ZOOM; ++level) {
+    if (cacheReady[level] && !cachePaths[level].empty()) Storage.remove(cachePaths[level].c_str());
+  }
+  Activity::onExit();
+}
 
 bool ImageZoomActivity::canZoom() const {
-  // The JPEG and PNG decoders clip negative offsets; other formats are shown
-  // fitted to the screen only.
+  // The JPEG and PNG decoders can cache and clip; other formats are shown fitted only.
   const std::string& path = image->getImagePath();
-  return FsHelpers::hasJpgExtension(path) || FsHelpers::hasPngExtension(path);
+  return (FsHelpers::hasJpgExtension(path) || FsHelpers::hasPngExtension(path)) && maxZoom > 1;
+}
+
+std::string ImageZoomActivity::cachePathFor(const int width, const int height) const {
+  const std::string& path = image->getImagePath();
+  const size_t dot = path.rfind('.');
+  char suffix[32];
+  snprintf(suffix, sizeof(suffix), "_zoom_%dx%d.pxc", width, height);
+  return (dot != std::string::npos ? path.substr(0, dot) : path) + suffix;
 }
 
 void ImageZoomActivity::zoomedSize(const int zoomLevel, int& width, int& height) const {
@@ -134,7 +164,7 @@ void ImageZoomActivity::loop() {
     if (!canZoom()) return;
     {
       RenderLock lock(*this);
-      setZoom(zoom >= MAX_ZOOM ? 1 : zoom + 1);
+      setZoom(zoom >= maxZoom ? 1 : zoom + 1);
     }
     requestRedraw(true);
     return;
@@ -156,6 +186,40 @@ void ImageZoomActivity::loop() {
   }
 }
 
+bool ImageZoomActivity::ensureZoomCache(const int width, const int height) {
+  if (zoom < 1 || zoom > MAX_ZOOM) return false;
+  const std::string path = cachePathFor(width, height);
+  if (cacheReady[zoom] && cachePaths[zoom] == path) return true;
+  if (cacheFailed[zoom] && cachePaths[zoom] == path) return false;
+
+  cachePaths[zoom] = path;
+  // Decoding the whole level takes a few seconds once; later moves reuse it.
+  // Drawn into the framebuffer for real (no backdrop restore) so the next
+  // refresh compares against what the panel actually shows.
+  GUI.drawPopup(renderer, tr(STR_LOADING));
+  cacheReady[zoom] = image->buildZoomCache(renderer, path, width, height);
+  cacheFailed[zoom] = !cacheReady[zoom];
+  return cacheReady[zoom];
+}
+
+void ImageZoomActivity::drawChrome(const bool imageShown) {
+  const int screenW = renderer.getScreenWidth();
+  if (zoom == 1 || !imageShown) {
+    // Hints only on the fitted view so they never cover part of a zoomed map.
+    const char* zoomLabel = imageShown && canZoom() ? tr(STR_ZOOM_IN) : nullptr;
+    const auto labels = mappedInput.mapLabels(mappedInput.withBackArrow(tr(STR_BACK)), zoomLabel, nullptr, nullptr);
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    return;
+  }
+  char badge[8];
+  snprintf(badge, sizeof(badge), "%dx", zoom);
+  const int badgeW = renderer.getTextWidth(UI_10_FONT_ID, badge) + 12;
+  const int badgeH = renderer.getLineHeight(UI_10_FONT_ID) + 6;
+  renderer.fillRect(screenW - badgeW - 4, 4, badgeW, badgeH, false);
+  renderer.drawRect(screenW - badgeW - 4, 4, badgeW, badgeH, true);
+  renderer.drawText(UI_10_FONT_ID, screenW - badgeW + 2, 7, badge, true);
+}
+
 void ImageZoomActivity::render(RenderLock&&) {
   if (!needsRedraw.exchange(false, std::memory_order_acq_rel)) return;
   const bool fullRefresh = needsFullRefresh.exchange(false, std::memory_order_acq_rel);
@@ -169,33 +233,31 @@ void ImageZoomActivity::render(RenderLock&&) {
   const int y = h <= screenH ? (screenH - h) / 2 : -panY;
 
   renderer.setRenderMode(GfxRenderer::BW);
-  // Large zoomed decodes can take a few seconds; say so before the screen goes quiet.
-  if (zoom > 1) GUI.drawPopup(renderer, tr(STR_LOADING), true);
 
+  // Preferred path: gray, drawn from this level's SD cache (JPEG and PNG only).
+  const std::string& imagePath = image->getImagePath();
+  if (FsHelpers::hasJpgExtension(imagePath) || FsHelpers::hasPngExtension(imagePath)) {
+    if (ensureZoomCache(w, h)) {
+      const std::string& path = cachePaths[zoom];
+      const bool shown = renderImageViewerGrayscale(renderer, [&](bool /*grayscale*/, const bool completeFrame) {
+        if (!ImageBlock::renderZoomCache(renderer, path, x, y, w, h)) return false;
+        if (completeFrame) drawChrome(true);
+        return true;
+      });
+      renderer.setRenderMode(GfxRenderer::BW);
+      if (shown) return;
+      LOG_ERR("ZOOM", "Cached view failed; decoding directly");
+    }
+  }
+
+  // Fallback: decode this view directly, in black and white.
   renderer.clearScreen();
-  // One black-and-white dithered decode per view keeps panning responsive;
-  // grayscale would need the image decoded four times.
   const bool ok = image->renderScaled(renderer, x, y, w, h, /*grayscale=*/false);
   if (!ok) {
     renderer.clearScreen();
     renderer.drawCenteredText(UI_10_FONT_ID, screenH / 2, tr(STR_IMAGE_ZOOM_FAILED));
   }
-
-  if (zoom == 1 || !ok) {
-    // Hints only on the fitted view so they never cover part of a zoomed map.
-    const char* zoomLabel = ok && canZoom() ? tr(STR_ZOOM_IN) : nullptr;
-    const auto labels = mappedInput.mapLabels(mappedInput.withBackArrow(tr(STR_BACK)), zoomLabel, nullptr, nullptr);
-    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
-  } else {
-    char badge[8];
-    snprintf(badge, sizeof(badge), "%dx", zoom);
-    const int badgeW = renderer.getTextWidth(UI_10_FONT_ID, badge) + 12;
-    const int badgeH = renderer.getLineHeight(UI_10_FONT_ID) + 6;
-    renderer.fillRect(screenW - badgeW - 4, 4, badgeW, badgeH, false);
-    renderer.drawRect(screenW - badgeW - 4, 4, badgeW, badgeH, true);
-    renderer.drawText(UI_10_FONT_ID, screenW - badgeW + 2, 7, badge, true);
-  }
-
+  drawChrome(ok);
   renderer.cleanupGrayscaleWithFrameBuffer();
   renderer.displayBuffer(fullRefresh ? HalDisplay::HALF_REFRESH : HalDisplay::FAST_REFRESH);
 }

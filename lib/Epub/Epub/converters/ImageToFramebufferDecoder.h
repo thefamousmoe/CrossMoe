@@ -24,6 +24,11 @@ struct RenderConfig {
   const uint8_t* sourceData = nullptr;  // borrowed only for this decode
   size_t sourceSize = 0;
   std::string cachePath;  // If non-empty, decoder will write pixel cache to this path
+  // Write the whole image to cachePath without drawing anything. The cache then
+  // covers every row and column, including those outside the screen, so a
+  // zoomed image can later be shown one screen-sized window at a time.
+  // Requires cachePath; x and y should be 0.
+  bool cacheOnly = false;
 };
 
 class ImageToFramebufferDecoder {

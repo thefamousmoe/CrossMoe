@@ -655,6 +655,92 @@ bool ImageBlock::renderScaled(GfxRenderer& renderer, const int x, const int y, c
   return success;
 }
 
+bool ImageBlock::sourceDimensions(int& outWidth, int& outHeight) const {
+  // Decoders read dimensions from a file, so make sure the extracted copy exists.
+  if (!sourcePath.empty() && !Storage.exists(imagePath.c_str())) {
+    if (!extractFn || !extractFn(extractContext, sourcePath.c_str(), imagePath.c_str())) {
+      LOG_ERR("IMG", "Zoom: could not extract %s for its size", sourcePath.c_str());
+      return false;
+    }
+  }
+  ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(imagePath);
+  ImageDimensions dims{};
+  if (!decoder || !decoder->getDimensions(imagePath, dims) || dims.width <= 0 || dims.height <= 0) {
+    LOG_ERR("IMG", "Zoom: could not read image size: %s", imagePath.c_str());
+    return false;
+  }
+  outWidth = dims.width;
+  outHeight = dims.height;
+  return true;
+}
+
+bool ImageBlock::buildZoomCache(GfxRenderer& renderer, const std::string& cachePath, const int drawWidth,
+                                const int drawHeight) const {
+  if (drawWidth <= 0 || drawHeight <= 0 || drawWidth > UINT16_MAX || drawHeight > UINT16_MAX) return false;
+
+  HeapByteBuffer source;
+  size_t sourceSize = 0;
+  if (!sourcePath.empty() && !Storage.exists(imagePath.c_str())) {
+    if (loadFn && ImageDecoderFactory::supportsMemorySource(imagePath))
+      source = loadFn(extractContext, sourcePath.c_str(), sourceSize);
+    if (!source && (!extractFn || !extractFn(extractContext, sourcePath.c_str(), imagePath.c_str()))) {
+      LOG_ERR("IMG", "Zoom cache: image extraction failed: %s", sourcePath.c_str());
+      return false;
+    }
+  }
+  ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(imagePath);
+  if (!decoder) {
+    LOG_ERR("IMG", "Zoom cache: no decoder for image: %s", imagePath.c_str());
+    return false;
+  }
+
+  invalidateRetainedPxcPath(cachePath);
+  RenderConfig config;
+  config.sourceData = source.get();
+  config.sourceSize = sourceSize;
+  config.x = 0;
+  config.y = 0;
+  config.maxWidth = drawWidth;
+  config.maxHeight = drawHeight;
+  config.useGrayscale = true;
+  config.finalMonochrome = false;
+  config.useDithering = true;
+  config.performanceMode = false;
+  config.useExactDimensions = true;
+  config.cachePath = cachePath;
+  config.cacheOnly = true;
+
+  if (!decoder->decodeToFramebuffer(imagePath, renderer, config)) {
+    LOG_ERR("IMG", "Zoom cache: decode failed: %s", imagePath.c_str());
+    Storage.remove(cachePath.c_str());
+    return false;
+  }
+
+  // A decoder that could not stream its cache still reports success; only a
+  // complete file counts.
+  FsFile cacheFile;
+  if (!Storage.openFileForRead("IMG", cachePath, cacheFile)) {
+    LOG_ERR("IMG", "Zoom cache: no cache written for %s", imagePath.c_str());
+    return false;
+  }
+  uint16_t cachedWidth = 0;
+  uint16_t cachedHeight = 0;
+  const bool valid = readValidCacheHeader(cacheFile, drawWidth, drawHeight, cachedWidth, cachedHeight);
+  cacheFile.close();
+  if (!valid) {
+    LOG_ERR("IMG", "Zoom cache: incomplete cache for %s", imagePath.c_str());
+    Storage.remove(cachePath.c_str());
+    return false;
+  }
+  LOG_INF("IMG", "Zoom cache built: %s (%dx%d)", cachePath.c_str(), drawWidth, drawHeight);
+  return true;
+}
+
+bool ImageBlock::renderZoomCache(GfxRenderer& renderer, const std::string& cachePath, const int x, const int y,
+                                 const int drawWidth, const int drawHeight) {
+  return renderFromCache(renderer, cachePath, x, y, drawWidth, drawHeight, /*imageGrayscale=*/true);
+}
+
 bool ImageBlock::serialize(Print& file) {
   return serialization::tryWriteString(file, imagePath) && serialization::tryWriteString(file, sourcePath) &&
          serialization::tryWritePod(file, width) && serialization::tryWritePod(file, height);

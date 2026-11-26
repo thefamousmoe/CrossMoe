@@ -4434,6 +4434,13 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuAction action, const 
       openWordSelect(/*framebufferContainsPage=*/false);
       break;
     }
+    case EpubReaderMenuAction::SEARCH_BOOK:
+      // The menu was on screen, so the word picker must redraw the page itself.
+      openWordSelect(/*framebufferContainsPage=*/false, -1, -1, false, /*searchMode=*/true);
+      break;
+    case EpubReaderMenuAction::ZOOM_IMAGE:
+      openImageZoom();
+      break;
     case EpubReaderMenuAction::LOOKUP_HISTORY: {
       pauseReadingPaceTimer("lookup_history");
       const BookReaderSettingsData bookSettings = loadBookReaderSettingsFile(epub->getCachePath());
