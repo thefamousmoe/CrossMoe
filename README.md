@@ -1,180 +1,98 @@
-> **This is a personal fork of [CrossPoint Reader](https://github.com/crosspoint-reader/crosspoint-reader)** with a focus on improved fonts and minimal reading stats.
+# CrossMoe
 
-### Supported Devices
+> **A personal fork of [CrossInk](https://github.com/uxjulia/CrossInk)**, which is itself a fork of [CrossPoint Reader](https://github.com/crosspoint-reader/crosspoint-reader). CrossMoe keeps everything CrossInk v2.0.0 does and adds a few features I wanted for reading fantasy books on my Xteink X3.
 
-- Xteink X3
-- Xteink X4
-- Xteink X4 Pro
-- Xteink X4 Classic
-- Seeed Studio Sticky
-- EEGO Reader A4
-- BOOX Picco
+### Supported devices
+
+- **Xteink X3**: built and tested here.
+- **Xteink X4**: uses the same firmware file but is untested. Auto-Rotate is hidden there because the X4 has no motion sensor.
+
+Other CrossInk devices (X4 Pro, X4 Classic, Sticky, EEGO A4, Picco) are not built by this fork. Use [CrossInk](https://github.com/uxjulia/CrossInk) for those.
 
 ## What's different in this fork
 
-My goal with this fork was to maintain the core Crosspoint firmware while integrating my preferred typography and some lightweight reading statistics. I’ve focused on keeping the underlying system stable while layering in a few "nice-to-have" features and UI refinements along the way.
+### Zoom Image
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="./docs/images/bitter-small-15-margin.jpg" alt="Font: Bitter, Size: 12 pt, Margin: 15" /><br/>
-      <em>Font: Bitter, Size: 12 pt, Margin: 15</em>
-    </td>
-    <td align="center">
-      <img src="./docs/images/reading-stats.jpg" alt="Reading Stats with custom front button mapping shown" /><br/>
-      <em>Reading Stats with custom front button mapping shown</em>
-    </td>
-  </tr>
-</table>
+Opens the biggest picture on the current page full screen, so you can actually read fantasy maps and diagrams.
 
-### Highlights
+- **Confirm** steps through fitted, 2x, 3x and 4x, then back to fitted.
+- **Left/Right** (front buttons) and **Up/Down** (side buttons) move around the zoomed picture.
+- **Back** returns to the book.
+- The first time you open a zoom level you'll see **Loading** for a few seconds while the picture is saved in gray to a temporary file on the SD card. Moving around that level is then quick. The temporary files are deleted when you leave.
+- Works with JPEG and PNG pictures, including in Adobe DRM (Libby) books.
 
-- Editable SD language files with persistent caching. See [language setup and translation instructions](docs/languages.md).
-- New reader fonts: Lexend Deca and Bitter.
-- Music notation and selected supplemental Unicode glyph support to be able to render Project Hail Mary accurately.
-- Added a custom `Minimal` theme and sleep screen option for the minimalists out there.
-- Added a custom `Dashboard` theme and sleep screen option for reading stats enthusiasts.
-- Reader font sizes: 10 to 16 pt built in on Xteink X3/X4. X4 Classic, X4 Pro, Sticky, and EEGO A4 use scalable fonts with 1 pt steps from 8 to 22 pt.
-- Added ~~strikethrough~~ support.
-- Made <u>underlines</u> thicker for better visibility.
-- Added support for `<hr>` section breaks.
-- Added support for "redaction" style rendering.
-- Added improved support for tables with simple markup.
-- Added ability to add bookmarks.
-- Added ability to remap front buttons that only applies in the reader.
-- Added Focus Reading and Guide Dots as optional reader modes.
-- Added Force Paragraph Indents for books that render as one giant wall of text.
-- Added ability to pin a sleep image as a favorite. The favorited image will always be displayed when your sleep settings are set to `Custom` or `Cover + Custom` (when no cover is available).
-- Added more in-reader control remapping options for side buttons, short power button clicks, and long-press menu actions, and more.
-- Added ability to mark a book as finished from the in-book menu. A pop-up will also display once 99% of the book is reached. This status allows tracking of total books read.
-- Added ability to move finished books to "Read" folder.
-- In-book menu to quickly adjust reader options without having to exit the book.
-- Reading stats: total books read, total reading time, number of sessions, pages turned, average session time, pages turned per minute. You can also set your reading stats as your sleep screen.
-- All-time reading stats [syncing](./docs/reading-stats-sync.md) between two CrossInk devices.
-- Reading [progress sync](./docs/nearby-position-sync.md) between two CrossInk devices.
-- Added customizable Auto Page Turn Interval (anything between 5-120 seconds).
-- A Library screen that lists every book on the SD card, with search, sorting, and a list or cover grid view for recently opened books.
-- To view a more detailed list for each version, visit the [releases](https://github.com/uxjulia/CrossInk/releases) page to read release notes.
+### Search Book
 
----
+Finds every place a name or phrase appears in the book, a bit like Kindle's X-Ray.
 
-### Reader Fonts
+1. Start **Search Book**. The word picker opens on the current page.
+2. Pick a word, or hold **Confirm** to select a phrase.
+3. A progress bar shows while the book is searched. **Back** cancels.
+4. Choose a result to jump to the page where it appears. **Back** takes you to where you were.
 
-The default fonts have been replaced with Lexend Deca and Bitter. These fonts have been chosen specifically to improve reading fluency and e-ink performance. These 'sturdier' typefaces feature uniform stroke weights and open geometries, allowing the X4/X3 to render crisp, high-contrast text with font-aliasing on while significantly reducing ghosting and artifacts.
+### Auto-Rotate
 
-- [Lexend Deca](https://fonts.google.com/specimen/Lexend+Deca) - A research-backed sans-serif typeface designed to improve reading fluency. Lexend was engineered based on the theory that reading issues are often a design problem (visual crowding) rather than a cognitive one.
-- [Bitter](https://fonts.google.com/specimen/Bitter) - A "contemporary" slab serif typeface for text, it is specially designed for comfortably reading on digital screens. The consistent stroke weight of Bitter helps it render particularly well on e-ink devices. The medium weight has been chosen specifically for improved rendering on the X4/X3.
+Lets EPUB and TXT books follow the way you hold the reader, using the X3's motion sensor. Turn it on in **Settings > Reader > Page Layout > Auto-Rotate**:
 
-The UI now uses [Inter](https://fonts.google.com/specimen/Inter) as the display font which has improved readability at smaller sizes.
+- **Flip only**: turning the reader upside down flips the page, for example when you switch hands.
+- **Flip and sideways**: also switches between portrait and landscape. Landscape lays the chapter out again, so expect a few seconds of **Loading** the first time.
+- **Rotation Delay** (Short / Normal / Long) sets how long the reader must rest in its new position first. Normal is 1 second for a flip and 2 seconds sideways.
 
-### Music and Supplemental Glyphs
+It starts working after you press any button in the book, which is how it learns which way up you're reading. It ignores the reader while it's lying flat or moving. If a sideways turn ever comes out upside down, use **Rotate Page 180°** within 20 seconds and it remembers the correction. Turn on **Orientation Aware** for the buttons in **Settings > Controls** so page turns follow the rotated screen.
 
-- Built-in reader fonts include music notation, selected Cyrillic glyphs, and the Project Hail Mary CJK fallback ranges. Additional SD-card fonts retain emoji fallback support.
+### Adobe DRM activation fix
 
----
+On the X3/X4, CrossInk v2.0.0 can't activate an Adobe ID for Libby and other `.acsm` books; activation fails with `pkcs12 rc=-133`. CrossMoe enables the RC2 cipher that Adobe's activation files need, so activation works.
 
-### Font Sizes
+### Where to find the new features
 
-- Xteink X3 and X4: built-in reader font sizes are 10 pt, 12 pt, 14 pt, and 16 pt.
-- X4 Classic, X4 Pro, Sticky, and EEGO A4: Lexend Deca and Bitter are scalable, so you can pick any size from 8 pt to 22 pt in 1 pt steps.
+Zoom Image and Search Book are on the **More** tab of the Reader Menu, next to Look Up Word. You can also add them to **Quick Actions** or assign them to a button under **Settings > Controls** (power button, side buttons, front long-press, or long-press Back/Menu).
 
-See [SD Card Fonts](./docs/sd-card-fonts.md) for installing additional font families and size ranges.
-
----
-
-### Reader features
-
-Reader Options, Focus Reading, Guide Dots, Force Paragraph Indents, reading stats, and finished-book behavior are documented in [Reader Features](./docs/reader-features.md).
-
-### Custom button actions
-
-CrossInk adds configurable button shortcuts.
-
-See [Controls](./docs/controls.md) for the full action list and defaults.
-
----
-
-## Tips for the best reading experience
-
-CrossInk runs on a small, low-power chip with limited memory (especially on the Xteink X3 and X4), so very large folders or complex EPUBs can be slower than they would be on a phone, tablet, or computer.
-
-- Keep folders under about 200 files. For the smoothest browsing, aim for 50-100 files per folder.
-- Having 1000+ books on the SD card is fine if they are split into smaller folders, such as by author, series, genre, or read/unread status.
-- Avoid putting every book in the SD card root. The file browser has to scan and sort the current folder before it can show it.
-- Text-first EPUBs are the best fit. Large image-heavy EPUBs, scanned books, comics, and omnibus files with thousands of sections may load slowly or fail under memory pressure.
-- As a rough target, EPUBs under 20 MB tend to work the best. Files over 50 MB may still work, but they are more likely to be slow or memory-sensitive, especially if they contain many large images.
-- If an EPUB is unusually slow, try [optimizing](./docs/webserver.md#epub-optimization) it with the built-in web optimizer (via File Transfer) before copying it to the SD card: remove unused high-resolution images, split very large omnibus files, and avoid embedding multiple full font families when possible.
-- Use a reliable SD card and leave some free space. CrossInk stores settings, reading progress, cache files, stats, and generated book data on the card.
+See [Reader Features](./docs/reader-features.md) for the full details.
 
 ---
 
 ## Installation
 
-The fastest way to install CrossInk is with Inky, CrossInk's web companion app: https://inky.crossink.dev/#flash-tools. Connect your reader to your computer with a USB cable and follow the steps on the page.
+CrossMoe has no releases. Firmware is built by GitHub Actions each time the `release/zoom-search` branch changes.
 
-You can also download a `firmware-*.bin` file from the [releases page](https://github.com/uxjulia/CrossInk/releases) and flash it with the web installer or the command line.
+1. Open the [Actions tab](../../actions/workflows/release_candidate.yml) and pick the newest run with a green check.
+2. Under **Artifacts**, download **firmware-x3-x4** and unzip it. You need to be signed in to GitHub, and artifacts are deleted after 90 days.
+3. Connect the reader to your computer with a USB cable and flash the `.bin` file with Inky, CrossInk's web flasher: https://inky.crossink.dev/#flash-tools
 
-See [Installation](./docs/installation.md) for step-by-step flashing and revert instructions.
-
----
-
-## Guides & Documentation
-
-Visit [https://www.crossink.dev](https://www.crossink.dev) for user guides.
-Start with the [User Guide](./docs/user-guide.md), or see [Plugins](./docs/sd-plugins.md)
-for installing and using extensions. Plugin authors can use the separate
-[Plugin Development Guide](./docs/development/plugin-development.md).
+[Installation](./docs/installation.md) has step-by-step flashing and revert instructions. They are written for CrossInk but work the same here. To go back to stock CrossInk, flash a firmware file from the [CrossInk releases page](https://github.com/uxjulia/CrossInk/releases).
 
 ---
 
-## Development quick start
+## Everything else
 
-CrossInk uses PlatformIO for building and flashing firmware. See [Getting Started](./docs/development/getting-started.md) for prerequisites, clone setup, and validation commands.
+All of CrossInk's other features are unchanged: fonts, reading stats, bookmarks, clippings, sync, plugins, themes, and the rest. See the [CrossInk README](https://github.com/uxjulia/CrossInk#readme) and the guides at [crossink.dev](https://www.crossink.dev).
 
-### Nix/NixOS
+CrossInk's tips for a smooth experience apply here too:
 
-Nix/NixOS users can enter the development shell with either `nix develop` (flakes) or `nix-shell`:
+- Keep folders under about 200 files.
+- Prefer text-first EPUBs under about 20 MB.
+- Use a reliable SD card with some free space.
 
-```bash
-nix develop -f nix
-# or
-nix-shell nix
-```
+---
 
-To flash a connected device, enable PlatformIO's udev rules in your NixOS configuration:
+## Building it yourself
 
-```nix
-services.udev.packages = with pkgs; [ platformio-core.udev ];
-```
-
-After rebuilding the system configuration, reconnect the device or reload udev rules.
-
-### Build / flash / monitor
-
-Connect your device to your computer via a USB cable. Before the first build, initialize the repository's submodules (including `freeink-sdk`):
+CrossMoe builds the same way as CrossInk, with [PlatformIO](https://platformio.org/). See [Getting Started](./docs/development/getting-started.md) for prerequisites.
 
 ```sh
+git clone https://github.com/thefamousmoe/crossmoe
+cd crossmoe
+git checkout release/zoom-search
 git submodule update --init --recursive
+pio run -e default --target upload   # X3/X4 firmware, flashed over USB
 ```
-
-Then flash the firmware using the correct environment for the device. The `default` environment is for the X3/X4 devices. The ESP32-S3 readers have their own named environments. EEGO A4 uses `eego_a4` (production) and `eego_a4-debug` (debug); see the [EEGO A4 build and hardware guide](docs/development/eego-a4-hardware.md).
-
-```sh
-pio run -e default --target upload
-```
-
-If PlatformIO reports `PackageException: Can not create a symbolic link for freeink-sdk/libs/hardware/BatteryMonitor, not a directory`, the `freeink-sdk` submodule is not initialized. Run the submodule command above and retry.
-
-See [Testing and Debugging](./docs/development/testing-debugging.md) for serial logging, simulator checks, static analysis, and bug-report guidance.
 
 ---
 
-## Notice on Contributions
+## Credits and license
 
-This repository does not accept pull requests. Feature requests may be opened in [discussions](https://github.com/uxjulia/CrossInk/discussions), but major features requiring ongoing support should be directed upstream to [CrossPoint](https://github.com/crosspoint-reader/crosspoint-reader).
+- [CrossPoint Reader](https://github.com/crosspoint-reader/crosspoint-reader), the firmware this all started from.
+- [CrossInk](https://github.com/uxjulia/CrossInk) by uxjulia, which CrossMoe builds on. If CrossMoe is useful to you, please consider [supporting CrossInk on Ko-fi](https://ko-fi.com/Q5Q01M6S7).
 
----
-
-If you'd like to show some love and support ongoing development, please consider supporting me on Ko-fi.
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Q5Q01M6S7)
+CrossMoe is a personal project with no support or schedule, so report CrossInk issues to CrossInk, not here. Released under the [MIT License](./LICENSE), like the projects it is based on.
