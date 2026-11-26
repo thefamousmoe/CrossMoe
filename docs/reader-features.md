@@ -220,9 +220,8 @@ Back/Menu).
 
 In the viewer:
 
-- **Confirm** zooms in: fitted, 2x, 3x, 4x, then back to fitted. Zooming stops
-  at the picture's own level of detail, so small pictures may only offer 2x or
-  3x.
+- **Confirm** zooms in: fitted, 2x, 3x, 4x, then back to fitted. Small
+  pictures look softer at the higher levels.
 - **Left/Right** and **Up/Down** move around the zoomed picture. If the picture
   only extends in one direction, every direction button moves along it.
 - **Back** returns to the book.

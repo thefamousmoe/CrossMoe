@@ -44,8 +44,6 @@ class ImageZoomActivity final : public Activity {
 
   std::unique_ptr<ImageBlock> image;
   int zoom = 1;
-  // Highest useful level: past the picture's own resolution zooming only blurs.
-  int maxZoom = MAX_ZOOM;
   // Top-left of the visible window inside the zoomed image.
   int panX = 0;
   int panY = 0;

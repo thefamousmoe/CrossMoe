@@ -17,8 +17,6 @@
 namespace {
 // Keep the zoomed image within sizes the decoders and the 16-bit cache header handle.
 constexpr int MAX_ZOOMED_EDGE = 6144;
-// Allow a little enlargement past the picture's own pixels before stopping.
-constexpr int NATIVE_OVERZOOM_PERCENT = 125;
 }  // namespace
 
 ImageZoomActivity::ImageZoomActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
@@ -28,17 +26,16 @@ ImageZoomActivity::ImageZoomActivity(GfxRenderer& renderer, MappedInputManager& 
 void ImageZoomActivity::onEnter() {
   Activity::onEnter();
 
-  // Cap zooming at the picture's real detail. Unknown size keeps the default cap.
+  // Logged to help diagnose pictures that do not zoom; zooming itself always
+  // offers every level (small pictures simply look softer at 3x-4x).
   int sourceWidth = 0;
   int sourceHeight = 0;
-  if (canZoom() && image->sourceDimensions(sourceWidth, sourceHeight)) {
+  if (image->sourceDimensions(sourceWidth, sourceHeight)) {
     int fitWidth = 0;
     int fitHeight = 0;
     zoomedSize(1, fitWidth, fitHeight);
-    const int levels = sourceWidth * NATIVE_OVERZOOM_PERCENT / 100 / std::max(1, fitWidth);
-    maxZoom = std::clamp(levels, 1, MAX_ZOOM);
-    LOG_INF("ZOOM", "Source %dx%d, fitted %dx%d, max zoom %dx", sourceWidth, sourceHeight, fitWidth, fitHeight,
-            maxZoom);
+    LOG_INF("ZOOM", "Source %dx%d, fitted %dx%d, path %s", sourceWidth, sourceHeight, fitWidth, fitHeight,
+            image->getImagePath().c_str());
   }
   requestRedraw(true);
 }
@@ -54,7 +51,7 @@ void ImageZoomActivity::onExit() {
 bool ImageZoomActivity::canZoom() const {
   // The JPEG and PNG decoders can cache and clip; other formats are shown fitted only.
   const std::string& path = image->getImagePath();
-  return (FsHelpers::hasJpgExtension(path) || FsHelpers::hasPngExtension(path)) && maxZoom > 1;
+  return FsHelpers::hasJpgExtension(path) || FsHelpers::hasPngExtension(path);
 }
 
 std::string ImageZoomActivity::cachePathFor(const int width, const int height) const {
@@ -164,7 +161,7 @@ void ImageZoomActivity::loop() {
     if (!canZoom()) return;
     {
       RenderLock lock(*this);
-      setZoom(zoom >= maxZoom ? 1 : zoom + 1);
+      setZoom(zoom >= MAX_ZOOM ? 1 : zoom + 1);
     }
     requestRedraw(true);
     return;
