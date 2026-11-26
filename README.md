@@ -13,12 +13,12 @@ Other CrossInk devices (X4 Pro, X4 Classic, Sticky, EEGO A4, Picco) are not buil
 
 ### Zoom Image
 
-Opens the biggest picture on the current page full screen, so you can actually read fantasy maps and diagrams.
+Opens the biggest picture on the current page at 2x zoom, so you can actually read fantasy maps and diagrams.
 
-- **Confirm** zooms in: fitted, 2x, 3x, then 4x.
-- **Back** zooms out one level at a time. From the fitted view it returns to the book.
+- It opens at **2x**. **Confirm** zooms in to 3x, then 4x.
+- **Back** zooms out one level at a time. From 2x it returns to the book.
 - **Left/Right** (front buttons) and **Up/Down** (side buttons) move around the zoomed picture, in portrait or landscape.
-- While zoomed in, the button hints along the bottom show what each button does: Zoom Out, Zoom In, Move Left, Move Right.
+- While zoomed in, button hints show what each button does: Out, In, Left and Right on the front, Up and Down beside the side buttons.
 - The first time you open a zoom level you'll see **Loading** for a few seconds while the picture is saved in gray to a temporary file on the SD card. Moving around that level is then quick. The temporary files are deleted when you leave.
 - Works with JPEG and PNG pictures, including in Adobe DRM (Libby) books.
 
