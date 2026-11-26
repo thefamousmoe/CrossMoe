@@ -6333,14 +6333,34 @@ void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId
 
   SearchPageWords words;
   collectSearchPageWords(page, words);
-  // Page words to box, as [first, last] page word index ranges.
-  std::array<std::pair<uint16_t, uint16_t>, 16> ranges{};
-  size_t rangeCount = 0;
+  // Box only the selected result, not every match on the page: pick the match
+  // whose neighboring words agree best with that result (ties go to the first
+  // on the page). Next/Prev then step to the other matches here.
+  SearchPageSummary current;
+  current.hashes.reserve(words.words.size());
+  for (const auto& word : words.words) current.hashes.push_back(SearchText::wordHash(word));
+  const SearchPageSummary none;
+  const bool hasSelected =
+      searchSelection.selected >= 0 && searchSelection.selected < static_cast<int>(searchSelection.hits.size());
+  int bestScore = -1;
+  size_t bestStart = 0;
   forEachSearchMatch(words.words, searchTokens, [&](const size_t start) {
-    const size_t end = start + searchTokens.size() - 1;
-    ranges[rangeCount++] = {words.firstPageWord[start], words.lastPageWord[end]};
-    return rangeCount < ranges.size();
+    const int score =
+        hasSelected ? searchContextScore(none, current, none, start, searchTokens.size(),
+                                         searchSelection.hits[static_cast<size_t>(searchSelection.selected)].context)
+                    : 0;
+    if (score > bestScore) {
+      bestScore = score;
+      bestStart = start;
+    }
+    return true;
   });
+  // Page words to box, as [first, last] page word index ranges.
+  std::array<std::pair<uint16_t, uint16_t>, 1> ranges{};
+  size_t rangeCount = 0;
+  if (bestScore >= 0) {
+    ranges[rangeCount++] = {words.firstPageWord[bestStart], words.lastPageWord[bestStart + searchTokens.size() - 1]};
+  }
 
   if (rangeCount > 0) {
     forEachVisiblePageWord(page, [&](const uint16_t pageWordIndex, const PageTextLine& line, const TextBlock& block,

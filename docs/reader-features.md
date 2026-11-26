@@ -255,7 +255,8 @@ like looking up a character in an X-Ray panel. Open it from the Reader Menu's
 3. A progress bar fills while every chapter is searched. Hold **Back** to stop.
 4. The results list shows each match with a little of the surrounding text,
    its chapter, and its position in the book. Choose one to jump there.
-5. On that page the match is boxed and a counter such as **3/17** shows in the
+5. On that page the match is boxed (only that one, even if the words appear
+   more than once on the page) and a counter such as **3/17** shows in the
    top-right corner. **Left** and **Right** jump to the previous and next match
    anywhere in the book; the button hints show **Prev** and **Next**.
 6. Press **Back** (shown as **Done**) to clear the highlight and keep reading
