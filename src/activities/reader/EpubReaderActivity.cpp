@@ -6383,6 +6383,11 @@ void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId
   renderer.fillRect(badgeX, badgeY, badgeW, badgeH, false);
   renderer.drawRect(badgeX, badgeY, badgeW, badgeH, true);
   renderer.drawText(UI_10_FONT_ID, badgeX + 6, badgeY + 3, counter, true);
+
+  // What the buttons do while a match is showing (see handleSearchModeInput()).
+  const auto labels =
+      mappedInput.mapLabels(tr(STR_DONE), nullptr, tr(STR_SEARCH_PREV_MATCH), tr(STR_SEARCH_NEXT_MATCH));
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
 void EpubReaderActivity::openFootnoteSelect(const bool returnToReaderMenu) {
