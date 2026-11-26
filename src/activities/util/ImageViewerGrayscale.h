@@ -7,14 +7,18 @@
 // drawFrame(grayscale, completeFrame) replays the image into the current plane.
 // Complete frames include chrome; overlay masks must contain only image shades.
 // Re-decoding avoids a second full framebuffer and keeps PNG memory bounded.
+// baseRefresh: FAST keeps the panel's gentle differential base; HALF clears the
+// previous picture first, which callers that repaint over an earlier image
+// (such as a panned zoom view) need to avoid ghosting.
 template <typename DrawFrame>
-bool renderImageViewerGrayscale(GfxRenderer& renderer, DrawFrame&& drawFrame) {
+bool renderImageViewerGrayscale(GfxRenderer& renderer, DrawFrame&& drawFrame,
+                                const HalDisplay::RefreshMode baseRefresh = HalDisplay::FAST_REFRESH) {
   const auto monochrome = [&]() {
     renderer.setRenderMode(GfxRenderer::BW);
     renderer.clearScreen();
     if (!drawFrame(false, true)) return false;
     renderer.cleanupGrayscaleWithFrameBuffer();
-    renderer.displayBuffer(HalDisplay::FAST_REFRESH);
+    renderer.displayBuffer(baseRefresh);
     return true;
   };
   const bool absolute = !renderer.isDisplayInverted() && renderer.supportsAbsoluteGrayscale();
@@ -25,11 +29,12 @@ bool renderImageViewerGrayscale(GfxRenderer& renderer, DrawFrame&& drawFrame) {
   renderer.clearScreen();
   if (!drawFrame(true, true)) return false;
   if (absolute) {
+    // Absolute and direct bases always start clean (their HALF default).
     const bool started = (renderer.supportsDirectGrayscale() && renderer.displayDirectGrayscaleBase()) ||
                          renderer.displayAbsoluteGrayscaleBase();
     if (!started) return monochrome();
   } else {
-    renderer.displayGrayscaleBase(HalDisplay::FAST_REFRESH);
+    renderer.displayGrayscaleBase(baseRefresh);
   }
   for (const auto mode : {GfxRenderer::GRAYSCALE_LSB, GfxRenderer::GRAYSCALE_MSB}) {
     renderer.setRenderMode(mode);

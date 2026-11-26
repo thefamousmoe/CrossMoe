@@ -45,6 +45,9 @@ bool HalTiltSensor::wake() {
   _lastTiltMs = millis();
   _wakeMs = millis();
   _isAwake = true;
+  // Entering a book or waking from sleep: adopt the position the reader is
+  // held in once it is held still briefly.
+  resetAutoRotate();
   return true;
 }
 

@@ -95,11 +95,19 @@ class HalTiltSensor {
   // button page turn: the reader is evidently holding the page upright.
   void anchorAutoRotate() { _autoRotate.anchorToCurrentPosition(); }
 
-  // Forgets the anchored position, e.g. after the orientation was changed by hand.
-  void resetAutoRotate() {
-    _autoRotate.reset();
+  // Forgets the anchored position. The position then held still for
+  // autoAnchorMs becomes the new anchor by itself; a button page turn anchors
+  // sooner. Defaults suit a book just opened or the sensor waking.
+  void resetAutoRotate(const unsigned long autoAnchorMs = AUTO_ANCHOR_MS) {
+    _autoRotate.reset(autoAnchorMs);
     _pendingQuarterTurns = 0;
   }
+
+  // Hold-still time before a reset auto-rotate adopts the current position.
+  static constexpr unsigned long AUTO_ANCHOR_MS = 600;
+  // Longer after a by-hand orientation change, so the device can be turned to
+  // match the new page before its position is taken as upright.
+  static constexpr unsigned long AUTO_ANCHOR_AFTER_MANUAL_MS = 3000;
 
   // Returns true once per tilt-forward gesture (next page direction).
   // Consumed on read — subsequent calls return false until next gesture.

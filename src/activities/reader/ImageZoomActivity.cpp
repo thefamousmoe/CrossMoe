@@ -17,6 +17,9 @@
 namespace {
 // Keep the zoomed image within sizes the decoders and the 16-bit cache header handle.
 constexpr int MAX_ZOOMED_EDGE = 6144;
+// Levels may enlarge the picture's own pixels by this much before stopping;
+// beyond it the view only gets blurrier. 2x is always offered.
+constexpr int NATIVE_OVERZOOM_PERCENT = 110;
 }  // namespace
 
 ImageZoomActivity::ImageZoomActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
@@ -26,18 +29,19 @@ ImageZoomActivity::ImageZoomActivity(GfxRenderer& renderer, MappedInputManager& 
 void ImageZoomActivity::onEnter() {
   Activity::onEnter();
 
-  // Logged to help diagnose pictures that do not zoom; zooming itself always
-  // offers every level (small pictures simply look softer at 3x-4x).
+  // Stop offering levels that would only enlarge the picture's own pixels.
   int sourceWidth = 0;
   int sourceHeight = 0;
-  if (image->sourceDimensions(sourceWidth, sourceHeight)) {
+  if (canZoom() && image->sourceDimensions(sourceWidth, sourceHeight)) {
     int fitWidth = 0;
     int fitHeight = 0;
     zoomedSize(1, fitWidth, fitHeight);
-    LOG_INF("ZOOM", "Source %dx%d, fitted %dx%d, path %s", sourceWidth, sourceHeight, fitWidth, fitHeight,
-            image->getImagePath().c_str());
+    const int levels = sourceWidth * NATIVE_OVERZOOM_PERCENT / 100 / std::max(1, fitWidth);
+    maxZoom = std::clamp(levels, 2, static_cast<int>(MAX_ZOOM));
+    LOG_INF("ZOOM", "Source %dx%d, fitted %dx%d, max zoom %dx, path %s", sourceWidth, sourceHeight, fitWidth, fitHeight,
+            maxZoom, image->getImagePath().c_str());
   }
-  requestRedraw(true);
+  requestRedraw();
 }
 
 void ImageZoomActivity::onExit() {
@@ -130,11 +134,10 @@ void ImageZoomActivity::pan(int dx, int dy) {
   panX += dx;
   panY += dy;
   clampPan();
-  if (panX != oldX || panY != oldY) requestRedraw(false);
+  if (panX != oldX || panY != oldY) requestRedraw();
 }
 
-void ImageZoomActivity::requestRedraw(const bool fullRefresh) {
-  if (fullRefresh) needsFullRefresh.store(true, std::memory_order_release);
+void ImageZoomActivity::requestRedraw() {
   needsRedraw.store(true, std::memory_order_release);
   requestUpdate();
 }
@@ -150,7 +153,16 @@ void ImageZoomActivity::loop() {
   Activity::loop();
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    close();
+    // Back zooms out one level at a time; only the fitted view returns to the book.
+    if (zoom <= 1) {
+      close();
+      return;
+    }
+    {
+      RenderLock lock(*this);
+      setZoom(zoom - 1);
+    }
+    requestRedraw();
     return;
   }
 
@@ -161,9 +173,10 @@ void ImageZoomActivity::loop() {
     if (!canZoom()) return;
     {
       RenderLock lock(*this);
-      setZoom(zoom >= MAX_ZOOM ? 1 : zoom + 1);
+      if (zoom >= maxZoom) return;  // already as close as the picture allows
+      setZoom(zoom + 1);
     }
-    requestRedraw(true);
+    requestRedraw();
     return;
   }
 
@@ -194,8 +207,11 @@ bool ImageZoomActivity::ensureZoomCache(const int width, const int height) {
   // Drawn into the framebuffer for real (no backdrop restore) so the next
   // refresh compares against what the panel actually shows.
   GUI.drawPopup(renderer, tr(STR_LOADING));
+  const unsigned long started = millis();
   cacheReady[zoom] = image->buildZoomCache(renderer, path, width, height);
   cacheFailed[zoom] = !cacheReady[zoom];
+  LOG_INF("ZOOM", "%dx copy %s in %lu ms (%dx%d)", zoom, cacheReady[zoom] ? "built" : "FAILED", millis() - started,
+          width, height);
   return cacheReady[zoom];
 }
 
@@ -219,29 +235,47 @@ void ImageZoomActivity::drawChrome(const bool imageShown) {
 
 void ImageZoomActivity::render(RenderLock&&) {
   if (!needsRedraw.exchange(false, std::memory_order_acq_rel)) return;
-  const bool fullRefresh = needsFullRefresh.exchange(false, std::memory_order_acq_rel);
 
   const int screenW = renderer.getScreenWidth();
   const int screenH = renderer.getScreenHeight();
   int w = 0;
   int h = 0;
   zoomedSize(zoom, w, h);
-  const int x = w <= screenW ? (screenW - w) / 2 : -panX;
-  const int y = h <= screenH ? (screenH - h) / 2 : -panY;
+  int x = w <= screenW ? (screenW - w) / 2 : -panX;
+  int y = h <= screenH ? (screenH - h) / 2 : -panY;
 
   renderer.setRenderMode(GfxRenderer::BW);
 
-  // Preferred path: gray, drawn from this level's SD cache (JPEG and PNG only).
+  // Preferred path: gray, drawn from this level's SD copy (JPEG and PNG only).
   const std::string& imagePath = image->getImagePath();
   if (FsHelpers::hasJpgExtension(imagePath) || FsHelpers::hasPngExtension(imagePath)) {
-    if (ensureZoomCache(w, h)) {
+    bool cached = ensureZoomCache(w, h);
+    // A level that cannot be saved would have to be decoded again on every
+    // move, which is slow and black and white. Stay on the previous level.
+    while (!cached && zoom > 1) {
+      LOG_ERR("ZOOM", "No SD copy for %dx; staying at %dx", zoom, zoom - 1);
+      maxZoom = zoom - 1;
+      setZoom(zoom - 1);
+      zoomedSize(zoom, w, h);
+      x = w <= screenW ? (screenW - w) / 2 : -panX;
+      y = h <= screenH ? (screenH - h) / 2 : -panY;
+      cached = ensureZoomCache(w, h);
+    }
+    if (cached) {
       const std::string& path = cachePaths[zoom];
-      const bool shown = renderImageViewerGrayscale(renderer, [&](bool /*grayscale*/, const bool completeFrame) {
-        if (!ImageBlock::renderZoomCache(renderer, path, x, y, w, h)) return false;
-        if (completeFrame) drawChrome(true);
-        return true;
-      });
+      const unsigned long started = millis();
+      // A clean (HALF) base on every new view: the X3's gentle differential
+      // base otherwise lets the previous view show through.
+      const bool shown = renderImageViewerGrayscale(
+          renderer,
+          [&](bool /*grayscale*/, const bool completeFrame) {
+            if (!ImageBlock::renderZoomCache(renderer, path, x, y, w, h)) return false;
+            if (completeFrame) drawChrome(true);
+            return true;
+          },
+          HalDisplay::HALF_REFRESH);
       renderer.setRenderMode(GfxRenderer::BW);
+      LOG_INF("ZOOM", "%dx view at %d,%d drawn in %lu ms", zoom, panX, panY, millis() - started);
       if (shown) return;
       LOG_ERR("ZOOM", "Cached view failed; decoding directly");
     }
@@ -256,5 +290,5 @@ void ImageZoomActivity::render(RenderLock&&) {
   }
   drawChrome(ok);
   renderer.cleanupGrayscaleWithFrameBuffer();
-  renderer.displayBuffer(fullRefresh ? HalDisplay::HALF_REFRESH : HalDisplay::FAST_REFRESH);
+  renderer.displayBuffer(HalDisplay::HALF_REFRESH);
 }

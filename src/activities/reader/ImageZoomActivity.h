@@ -9,8 +9,8 @@
 #include "activities/Activity.h"
 
 // Full-screen viewer for one picture on the current EPUB page (maps, diagrams).
-// Opened by the "Zoom Image" action. Confirm steps the zoom level, the
-// direction buttons pan, Back returns to the book.
+// Opened by the "Zoom Image" action. Confirm zooms in, Back zooms out (and
+// returns to the book from the fitted view), the direction buttons pan.
 //
 // Each zoom level is decoded once, in 2-bit gray, into a file on the SD card
 // (see ImageBlock::buildZoomCache). Panning then only reads the visible rows
@@ -34,7 +34,7 @@ class ImageZoomActivity final : public Activity {
   void setZoom(int newZoom);
   void pan(int dx, int dy);
   void clampPan();
-  void requestRedraw(bool fullRefresh);
+  void requestRedraw();
   void close();
   bool canZoom() const;
   std::string cachePathFor(int width, int height) const;
@@ -44,11 +44,13 @@ class ImageZoomActivity final : public Activity {
 
   std::unique_ptr<ImageBlock> image;
   int zoom = 1;
+  // Highest level offered: past the picture's own detail zooming only blurs.
+  // Lowered further if a level's SD copy cannot be built.
+  int maxZoom = MAX_ZOOM;
   // Top-left of the visible window inside the zoomed image.
   int panX = 0;
   int panY = 0;
   std::atomic<bool> needsRedraw{true};
-  std::atomic<bool> needsFullRefresh{true};
 
   // Per zoom level (index = level). Written only by render(), read by onExit().
   std::string cachePaths[MAX_ZOOM + 1];

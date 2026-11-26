@@ -22,10 +22,15 @@ class AutoRotateDetector {
   };
 
   // Forgets the anchor and any pending turn. Call when the screen orientation
-  // changes for another reason, or when the sensor restarts.
-  void reset() {
+  // changes for another reason, or when the sensor restarts. With
+  // autoAnchorMs > 0 the first position held still that long becomes the new
+  // anchor by itself (a book just opened is being read upright); 0 waits for
+  // anchorToCurrentPosition().
+  void reset(const unsigned long autoAnchorMs = 0) {
     anchorZone_ = NO_ZONE;
     lastZone_ = NO_ZONE;
+    autoAnchorMs_ = autoAnchorMs;
+    clearAnchorCandidate();
     clearCandidate();
   }
 
@@ -35,7 +40,10 @@ class AutoRotateDetector {
   // sets a missing anchor: a page turn made while the device is part-way
   // through being turned must not cancel that turn.
   void anchorToCurrentPosition() {
-    if (anchorZone_ == NO_ZONE && lastZone_ != NO_ZONE) anchorZone_ = lastZone_;
+    if (anchorZone_ == NO_ZONE && lastZone_ != NO_ZONE) {
+      anchorZone_ = lastZone_;
+      clearAnchorCandidate();
+    }
   }
 
   // Restarts the hold timer, e.g. after a tilt page-turn flick.
@@ -48,7 +56,12 @@ class AutoRotateDetector {
                  const unsigned long sidewaysHoldMs) {
     lastZone_ = zoneFor(s);
     const uint8_t zone = lastZone_;
-    if (anchorZone_ == NO_ZONE || zone == NO_ZONE || zone == anchorZone_) {
+    if (anchorZone_ == NO_ZONE) {
+      clearCandidate();
+      updateAutoAnchor(zone, s.nowMs);
+      return 0;
+    }
+    if (zone == NO_ZONE || zone == anchorZone_) {
       clearCandidate();
       return 0;
     }
@@ -109,8 +122,33 @@ class AutoRotateDetector {
     candidateSinceMs_ = 0;
   }
 
+  void clearAnchorCandidate() {
+    anchorCandidateZone_ = NO_ZONE;
+    anchorCandidateSinceMs_ = 0;
+  }
+
+  // Adopts a position held still for autoAnchorMs_ as the anchor.
+  void updateAutoAnchor(const uint8_t zone, const unsigned long nowMs) {
+    if (autoAnchorMs_ == 0 || zone == NO_ZONE) {
+      clearAnchorCandidate();
+      return;
+    }
+    if (anchorCandidateZone_ != zone) {
+      anchorCandidateZone_ = zone;
+      anchorCandidateSinceMs_ = nowMs;
+      return;
+    }
+    if (nowMs - anchorCandidateSinceMs_ >= autoAnchorMs_) {
+      anchorZone_ = zone;
+      clearAnchorCandidate();
+    }
+  }
+
   uint8_t anchorZone_ = NO_ZONE;
   uint8_t lastZone_ = NO_ZONE;
   uint8_t candidateZone_ = NO_ZONE;
   unsigned long candidateSinceMs_ = 0;
+  unsigned long autoAnchorMs_ = 0;
+  uint8_t anchorCandidateZone_ = NO_ZONE;
+  unsigned long anchorCandidateSinceMs_ = 0;
 };
