@@ -226,6 +226,11 @@ In the viewer:
 - **Left/Right** and **Up/Down** move around the zoomed picture. If the picture
   only extends in one direction, every direction button moves along it.
 
+While zoomed in, the button hints along the bottom show what each front button
+does: **Zoom Out**, **Zoom In** (hidden at 3x), and **Move Left**/**Move Right**,
+or **Move Up**/**Move Down** when the picture only scrolls up and down. The side
+buttons move up and down, following the way the reader is held.
+
 The first time you open each zoom level, the viewer shows **Loading** while it
 decodes the whole picture in shades of gray and saves it to a temporary file
 on the SD card. Moving around that level then reads straight from the file, so

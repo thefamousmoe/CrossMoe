@@ -2200,7 +2200,25 @@ void loop() {
   }
 
   const unsigned long sleepTimeoutMs = SETTINGS.getSleepTimeoutMs();
-  if (sleepTimeoutMs > 0 && millis() - lastActivityTime >= sleepTimeoutMs) {
+  // Stay Awake When Plugged In: hold off the inactivity sleep while USB power is
+  // seen, and restart the full timer on unplug so it does not sleep instantly.
+  // On the X3, "plugged in" is inferred from charge current, so a full battery
+  // on a charger can read as unplugged.
+  static bool heldAwakeByUsb = false;
+  bool holdAwakeForUsb = false;
+  if (SETTINGS.stayAwakeWhenPlugged && sleepTimeoutMs > 0) {
+#ifdef SIMULATOR
+    holdAwakeForUsb = gpio.isUsbConnected();
+#else
+    holdAwakeForUsb = gpio.isUsbConnectedCached();
+#endif
+  }
+  if (holdAwakeForUsb != heldAwakeByUsb) {
+    LOG_INF("SLP", "Stay awake on USB: %s", holdAwakeForUsb ? "on" : "off");
+    if (!holdAwakeForUsb) lastActivityTime = millis();
+    heldAwakeByUsb = holdAwakeForUsb;
+  }
+  if (!holdAwakeForUsb && sleepTimeoutMs > 0 && millis() - lastActivityTime >= sleepTimeoutMs) {
     LOG_DBG("SLP", "Auto-sleep triggered after %lu ms of inactivity", sleepTimeoutMs);
     enterDeepSleep(true);
     // This should never be hit as `enterDeepSleep` calls esp_deep_sleep_start

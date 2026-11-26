@@ -5066,8 +5066,8 @@ class SimulatorSmokeTest {
            expectedBaseSettingsCapacity, base.capacity());
     }
     const auto device = buildSystemDeviceSettingsList(all);
-    if (device.size() < 3 || device[1].nameId != StrId::STR_TIME_TO_SLEEP ||
-        device[2].nameId != StrId::STR_CUSTOM_BOOTSCREEN) {
+    if (device.size() < 4 || device[1].nameId != StrId::STR_TIME_TO_SLEEP ||
+        device[2].nameId != StrId::STR_STAY_AWAKE_PLUGGED_IN || device[3].nameId != StrId::STR_CUSTOM_BOOTSCREEN) {
       fail("Custom bootscreen setting order mismatch");
     }
     JsonDocument original;

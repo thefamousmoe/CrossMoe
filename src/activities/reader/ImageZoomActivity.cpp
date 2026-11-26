@@ -227,12 +227,24 @@ bool ImageZoomActivity::ensureZoomCache(const int width, const int height) {
 void ImageZoomActivity::drawChrome(const bool imageShown) {
   const int screenW = renderer.getScreenWidth();
   if (zoom == 1 || !imageShown) {
-    // Hints only on the fitted view so they never cover part of a zoomed map.
     const char* zoomLabel = imageShown && canZoom() ? tr(STR_ZOOM_IN) : nullptr;
     const auto labels = mappedInput.mapLabels(mappedInput.withBackArrow(tr(STR_BACK)), zoomLabel, nullptr, nullptr);
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     return;
   }
+
+  // Zoomed in: label every front button. When the picture only scrolls one
+  // way, pan() turns Left/Right into Up/Down, so the labels follow suit.
+  int w = 0;
+  int h = 0;
+  zoomedSize(zoom, w, h);
+  const bool verticalOnly = w <= screenW && h > renderer.getScreenHeight();
+  const char* zoomInLabel = zoom < maxZoom ? tr(STR_ZOOM_IN) : nullptr;
+  const auto labels =
+      mappedInput.mapLabels(tr(STR_ZOOM_OUT), zoomInLabel, verticalOnly ? tr(STR_MOVE_UP) : tr(STR_MOVE_LEFT),
+                            verticalOnly ? tr(STR_MOVE_DOWN) : tr(STR_MOVE_RIGHT));
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+
   char badge[8];
   snprintf(badge, sizeof(badge), "%dx", zoom);
   const int badgeW = renderer.getTextWidth(UI_10_FONT_ID, badge) + 12;

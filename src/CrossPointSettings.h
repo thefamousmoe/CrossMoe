@@ -627,6 +627,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t paragraphAlignment = JUSTIFIED;
   // Auto-sleep timeout setting (default 10 minutes). Legacy sleepTimeout enum values are migration-only.
   uint8_t sleepTimeoutMinutes = 10;
+  // Skip the inactivity sleep while USB power is detected (the timer restarts on unplug).
+  uint8_t stayAwakeWhenPlugged = 0;
   // Quarter-dBm ceiling; 0 preserves the driver's default transmit power.
   uint8_t wifiTransmitPower = 0;
   // E-ink refresh frequency (default 15 pages)

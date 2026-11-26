@@ -365,8 +365,9 @@ Which entries you see depends on your device. Button devices show **Front Button
 
 #### 3.6.4 System
 
-- **Device**: Opens a submenu with **Device Name**, **Time to Sleep**, **Custom Boot Screen**, **Language**, **Keyboard layouts**, and, on devices with a scalable-font reader, **UI Fallback Font**. Devices with a real-time clock also show **Clock Format**, **Clock UTC Offset**, **Date Format**, **Date Separator**, and **Sync Date/Time**.
+- **Device**: Opens a submenu with **Device Name**, **Time to Sleep**, **Stay Awake When Plugged In**, **Custom Boot Screen**, **Language**, **Keyboard layouts**, and, on devices with a scalable-font reader, **UI Fallback Font**. Devices with a real-time clock also show **Clock Format**, **Clock UTC Offset**, **Date Format**, **Date Separator**, and **Sync Date/Time**.
   - **Time to Sleep**: How long the device stays idle before it goes to sleep on its own, in minutes, or **Never**.
+  - **Stay Awake When Plugged In**: When on, the device does not go to sleep on its own while it is on USB power. The **Time to Sleep** timer starts over when you unplug it. On the X3, the reader can only tell it is plugged in while the battery is charging, so on a charger with a full battery it may still go to sleep.
   - **Custom Boot Screen**: On by default. When it is off, CrossInk shows the standard logo at startup and keeps the current sleep screen visible when you wake it with the Power button, even if a custom image or boot-screen folder is set up. Turning it off does not delete your image or folders; turn it back on to use them again. See [Boot Screen](#38-boot-screen).
   - **UI Fallback Font**: Fill characters missing from the built-in font throughout menus, filenames, and other interface text. Put one static regular `.ttf` or `.otf` font, plus optional bold, in a family folder under `/.crossink/languages/fonts/`. Supported characters and your reading font stay unchanged. See [UI fallback fonts](./languages.md#add-missing-characters-with-ui-fallback-font).
 
