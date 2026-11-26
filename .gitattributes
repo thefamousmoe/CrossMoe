@@ -4,3 +4,7 @@
 assets/hyphenation/patterns/*.tex -text -whitespace
 assets/hyphenation-extra/patterns/*.tex -text -whitespace
 assets/hyphenation-extra/licenses/*.txt -text -whitespace
+
+# Patch files are applied with `git apply` against upstream sources with LF
+# endings; never convert them to CRLF on Windows checkouts.
+*.patch -text
