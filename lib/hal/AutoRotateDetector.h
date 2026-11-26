@@ -91,8 +91,8 @@ class AutoRotateDetector {
     const float inPlane = std::sqrt(s.ax * s.ax + s.ay * s.ay);
     if (inPlane < MIN_UPRIGHT_FRACTION * total) return NO_ZONE;
 
-    constexpr float RAD_TO_DEG = 57.2957795f;
-    float angle = std::atan2(s.ay, s.ax) * RAD_TO_DEG;  // -180..180, 0 = +X
+    constexpr float kDegreesPerRadian = 57.2957795f;
+    float angle = std::atan2(s.ay, s.ax) * kDegreesPerRadian;  // -180..180, 0 = +X
     if (angle < 0) angle += 360.0f;
     for (uint8_t zone = 0; zone < 4; ++zone) {
       float diff = angle - 90.0f * zone;
