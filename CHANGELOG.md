@@ -6,7 +6,7 @@
 - Search Book finds every place a word or phrase appears in an EPUB, with a progress bar, and jumps to a result. Back returns to where you were. Open it from the Reader Menu's More tab, Quick Actions, or a button shortcut.
 - Auto-Rotate in `Settings > Reader > Page Layout` and the Reader Menu's Layout tab follows the device's motion sensor in EPUB and TXT books: upside-down flips only, or flips and sideways turns, with a Short (0.25 s), Normal, or Long rotation delay. A "Rotating" notice shows while the page turns. It starts as soon as a book opens or the reader wakes, and it learns which way up the reader is held so a book closed in one orientation opens the right way for how it is picked up.
 - Stay Awake When Plugged In in `Settings > System > Device` keeps the reader from going to sleep on its own while it is on USB power. The sleep timer starts over when you unplug.
-- Zoom Image shows button hints while zoomed in: Zoom Out, Zoom In, and Move Left/Right (or Move Up/Down when the picture only scrolls vertically).
+- Zoom Image shows button hints while zoomed in: Out, In, Left, and Right on the front buttons, and Up and Down beside the side buttons.
 - Search Book lands on the page showing the chosen match, recognized by the words around it. After a jump the match is boxed with a match counter; Left/Right step to the previous/next match and Back clears the highlight.
 
 ### Fixed

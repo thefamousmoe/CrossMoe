@@ -96,6 +96,9 @@ class MappedInputManager {
   void suppressNextConfirmRelease() { releaseSuppression.suppressConfirm(); }
   void suppressNextPowerRelease() { releaseSuppression.suppressPower(); }
   void suppressNextSideRelease(Button button);
+  // Physical side button (HalGPIO::BTN_UP or BTN_DOWN) that currently triggers
+  // Up or Down, which depends on orientation. For labelling side-button hints.
+  uint8_t physicalSideButtonFor(const Button button) const { return mappedSideButtonFor(button); }
   void suppressNextFrontRelease(Button button);
   void suppressNextPowerConfirmRelease() { releaseSuppression.suppressPowerConfirm(); }
   bool isPowerReleaseSuppressed() const { return releaseSuppression.isPowerReleaseSuppressed(); }

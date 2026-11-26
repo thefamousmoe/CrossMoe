@@ -226,10 +226,11 @@ In the viewer:
 - **Left/Right** and **Up/Down** move around the zoomed picture. If the picture
   only extends in one direction, every direction button moves along it.
 
-While zoomed in, the button hints along the bottom show what each front button
-does: **Zoom Out**, **Zoom In** (hidden at 4x), and **Move Left**/**Move Right**,
-or **Move Up**/**Move Down** when the picture only scrolls up and down. The side
-buttons move up and down, following the way the reader is held.
+While zoomed in, button hints show what each button does: **Out**, **In**
+(hidden at 4x), **Left** and **Right** on the front buttons, and **Up** and
+**Down** next to the side buttons, following the way the reader is held. When
+the picture only scrolls one way, the labels change to match (for example
+**Up**/**Down** on the front buttons).
 
 The first time you open each zoom level, the viewer shows **Loading** while it
 decodes the whole picture in shades of gray and saves it to a temporary file

@@ -31,6 +31,7 @@ class ImageZoomActivity final : public Activity {
  private:
   // Size of the whole image at a zoom level, in screen pixels.
   void zoomedSize(int zoomLevel, int& width, int& height) const;
+  void drawSideHints(const char* upLabel, const char* downLabel);
   void setZoom(int newZoom);
   void pan(int dx, int dy);
   void clampPan();

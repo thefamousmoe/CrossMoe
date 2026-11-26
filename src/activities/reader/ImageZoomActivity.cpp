@@ -3,6 +3,7 @@
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
+#include <HalGPIO.h>
 #include <HalStorage.h>
 #include <I18n.h>
 #include <Logging.h>
@@ -10,6 +11,7 @@
 #include <algorithm>
 #include <cstdio>
 
+#include "DeviceCapabilities.h"
 #include "activities/util/ImageViewerGrayscale.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -224,6 +226,33 @@ bool ImageZoomActivity::ensureZoomCache(const int width, const int height) {
   return cacheReady[zoom];
 }
 
+void ImageZoomActivity::drawSideHints(const char* upLabel, const char* downLabel) {
+  // Side hints are laid out against the physical buttons, which sit on the
+  // portrait edges, so draw them in portrait like the front-button hints.
+  const GfxRenderer::Orientation original = renderer.getOrientation();
+  renderer.setOrientation(GfxRenderer::Orientation::Portrait);
+
+  // Which physical button pans up depends on how the reader is held.
+  const bool physicalUpPansUp = mappedInput.physicalSideButtonFor(MappedInputManager::Button::Up) == HalGPIO::BTN_UP;
+  const char* topLabel = physicalUpPansUp ? upLabel : downLabel;
+  const char* bottomLabel = physicalUpPansUp ? downLabel : upLabel;
+
+  // The themes outline the hints without filling them; clear the picture
+  // behind them so the labels can be read.
+  constexpr int kHintW = 36;
+  const int portraitW = renderer.getScreenWidth();
+  if (deviceHasEdgeSideButtons(gpio)) {
+    constexpr int kHintY = 150;
+    constexpr int kHintH = 90;
+    renderer.fillRect(0, kHintY, kHintW, kHintH, false);
+    renderer.fillRect(portraitW - kHintW, kHintY, kHintW, kHintH, false);
+  } else {
+    renderer.fillRect(portraitW - kHintW, 0, kHintW, renderer.getScreenHeight(), false);
+  }
+  GUI.drawSideButtonHints(renderer, topLabel, bottomLabel);
+  renderer.setOrientation(original);
+}
+
 void ImageZoomActivity::drawChrome(const bool imageShown) {
   const int screenW = renderer.getScreenWidth();
   if (zoom == 1 || !imageShown) {
@@ -233,17 +262,20 @@ void ImageZoomActivity::drawChrome(const bool imageShown) {
     return;
   }
 
-  // Zoomed in: label every front button. When the picture only scrolls one
-  // way, pan() turns Left/Right into Up/Down, so the labels follow suit.
+  // Zoomed in: label every button. When the picture only scrolls one way,
+  // pan() moves every direction button along it, so the labels follow suit.
   int w = 0;
   int h = 0;
   zoomedSize(zoom, w, h);
   const bool verticalOnly = w <= screenW && h > renderer.getScreenHeight();
+  const bool horizontalOnly = h <= renderer.getScreenHeight() && w > screenW;
   const char* zoomInLabel = zoom < maxZoom ? tr(STR_ZOOM_IN) : nullptr;
   const auto labels =
       mappedInput.mapLabels(tr(STR_ZOOM_OUT), zoomInLabel, verticalOnly ? tr(STR_MOVE_UP) : tr(STR_MOVE_LEFT),
                             verticalOnly ? tr(STR_MOVE_DOWN) : tr(STR_MOVE_RIGHT));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  drawSideHints(horizontalOnly ? tr(STR_MOVE_LEFT) : tr(STR_MOVE_UP),
+                horizontalOnly ? tr(STR_MOVE_RIGHT) : tr(STR_MOVE_DOWN));
 
   char badge[8];
   snprintf(badge, sizeof(badge), "%dx", zoom);
