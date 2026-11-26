@@ -59,7 +59,8 @@ class HalTiltSensor {
   uint8_t _autoRotateMode = 0;  // 0 off, 1 upside-down flips only, 2 flips and sideways
   unsigned long _flipHoldMs = 1000;
   unsigned long _sidewaysHoldMs = 2000;
-  uint8_t _pendingQuarterTurns = 0;  // consumed by takeAutoRotateTurns()
+  uint8_t _pendingQuarterTurns = 0;                    // consumed by takeAutoRotateTurns()
+  uint8_t _readingZone = AutoRotateDetector::NO_ZONE;  // consumed by takeReadingPosition()
 
   void updateTiltGesture(const Imu::Sample& sample, uint8_t direction, uint8_t orientation, uint8_t sensitivity,
                          unsigned long now);
@@ -92,8 +93,28 @@ class HalTiltSensor {
   uint8_t takeAutoRotateTurns();
 
   // Pairs the current resting position with the page now on screen. Call on a
-  // button page turn: the reader is evidently holding the page upright.
-  void anchorAutoRotate() { _autoRotate.anchorToCurrentPosition(); }
+  // button page turn: the reader is evidently holding the page upright. Also
+  // records that position for takeReadingPosition(), unless the device is
+  // part-way through a turn away from its anchor.
+  void anchorAutoRotate() {
+    const uint8_t zone = _autoRotate.currentZone();
+    if (zone != AutoRotateDetector::NO_ZONE && (!_autoRotate.hasAnchor() || zone == _autoRotate.anchorZone())) {
+      _readingZone = zone;
+    }
+    _autoRotate.anchorToCurrentPosition();
+  }
+
+  // Resting position (0-3) the device was in at the last button press while
+  // reading, or NO_ZONE. Consumed on read.
+  uint8_t takeReadingPosition() {
+    const uint8_t zone = _readingZone;
+    _readingZone = AutoRotateDetector::NO_ZONE;
+    return zone;
+  }
+
+  // Resting position (0-3) currently paired with the page on screen, or
+  // NO_ZONE until one is adopted after a reset.
+  uint8_t autoRotateAnchorPosition() const { return _autoRotate.anchorZone(); }
 
   // Forgets the anchored position. The position then held still for
   // autoAnchorMs becomes the new anchor by itself; a button page turn anchors
@@ -101,6 +122,7 @@ class HalTiltSensor {
   void resetAutoRotate(const unsigned long autoAnchorMs = AUTO_ANCHOR_MS) {
     _autoRotate.reset(autoAnchorMs);
     _pendingQuarterTurns = 0;
+    _readingZone = AutoRotateDetector::NO_ZONE;
   }
 
   // Hold-still time before a reset auto-rotate adopts the current position.

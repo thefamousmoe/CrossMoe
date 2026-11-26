@@ -31,4 +31,18 @@ inline uint8_t orientationAfterTurns(const uint8_t currentOrientation, const uin
   return static_cast<uint8_t>((currentOrientation + steps) % 4);
 }
 
+// Fixed link between the sensor and the screen, learned while reading: the
+// orientation that reads upright when the device rests in `zone` (0-3, see
+// AutoRotateDetector::zoneFor). Stored as one number so a book opened later can
+// start the right way up for how the device is held. Consistent with
+// orientationAfterTurns(): turning the device moves both by the same steps.
+inline uint8_t uprightOffset(const uint8_t orientation, const uint8_t zone, const bool mirrored) {
+  return mirrored ? static_cast<uint8_t>((orientation + 4 - zone % 4) % 4)
+                  : static_cast<uint8_t>((orientation + zone) % 4);
+}
+
+inline uint8_t orientationForZone(const uint8_t offset, const uint8_t zone, const bool mirrored) {
+  return mirrored ? static_cast<uint8_t>((offset + zone) % 4) : static_cast<uint8_t>((offset + 4 - zone % 4) % 4);
+}
+
 }  // namespace ReaderAutoRotate

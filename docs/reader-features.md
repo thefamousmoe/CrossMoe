@@ -463,9 +463,17 @@ again in the new direction.
 
 How it behaves:
 
-- It starts working on its own when you open a book or wake the reader: once
-  you hold the reader still for about half a second, it takes that as the way
-  up you are reading. Pressing any button in the book does the same at once.
+- It starts working on its own when you open a book or wake the reader. Each
+  time you press a button while reading, it notes which way up the reader is
+  held for the page on screen and saves that to the SD card. When a book opens,
+  it checks how you are holding the reader and turns the page to match, so a
+  book closed in landscape opens in portrait if that is how you pick it up.
+  Until it has learned this (the first button press after turning Auto-Rotate
+  on), it takes the way you first hold the reader still as upright.
+- If it turns the page on opening and you change the orientation back by hand
+  within 20 seconds, it forgets what it learned and learns again from your next
+  button press. Button presses after choosing an orientation by hand (for
+  example while reading lying on your side) do not teach it.
 - It ignores the device while it lies flat (on a table, or face-up in bed) and
   while it is moving.
 - Choosing an orientation by hand pauses auto-rotate until you have held the

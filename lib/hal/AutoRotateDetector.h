@@ -35,6 +35,9 @@ class AutoRotateDetector {
   }
 
   bool hasAnchor() const { return anchorZone_ != NO_ZONE; }
+  uint8_t anchorZone() const { return anchorZone_; }
+  // Resting position from the latest reading, or NO_ZONE (flat, moving, shaken).
+  uint8_t currentZone() const { return lastZone_; }
 
   // Records the current resting position as matching the upright page. Only
   // sets a missing anchor: a page turn made while the device is part-way

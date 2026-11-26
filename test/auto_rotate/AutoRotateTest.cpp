@@ -159,3 +159,41 @@ TEST(ReaderAutoRotate, SidewaysFollowsTheX3SensorFrame) {
   EXPECT_EQ(ReaderAutoRotate::orientationAfterTurns(PORTRAIT, 1, true), LANDSCAPE_CW);
   EXPECT_EQ(ReaderAutoRotate::orientationAfterTurns(PORTRAIT, 0, false), PORTRAIT);
 }
+
+TEST(ReaderAutoRotate, LearnedUprightPositionRoundTrips) {
+  for (const bool mirrored : {false, true}) {
+    for (uint8_t orientation = 0; orientation < 4; ++orientation) {
+      for (uint8_t zone = 0; zone < 4; ++zone) {
+        const uint8_t offset = ReaderAutoRotate::uprightOffset(orientation, zone, mirrored);
+        EXPECT_LT(offset, 4);
+        EXPECT_EQ(ReaderAutoRotate::orientationForZone(offset, zone, mirrored), orientation);
+      }
+    }
+  }
+}
+
+TEST(ReaderAutoRotate, LearnedUprightPositionAgreesWithTurns) {
+  // Turning the device after learning must land where the learned link says.
+  for (const bool mirrored : {false, true}) {
+    for (uint8_t orientation = 0; orientation < 4; ++orientation) {
+      for (uint8_t zone = 0; zone < 4; ++zone) {
+        const uint8_t offset = ReaderAutoRotate::uprightOffset(orientation, zone, mirrored);
+        for (uint8_t turns = 1; turns < 4; ++turns) {
+          const uint8_t newZone = (zone + turns) % 4;
+          EXPECT_EQ(ReaderAutoRotate::orientationForZone(offset, newZone, mirrored),
+                    ReaderAutoRotate::orientationAfterTurns(orientation, turns, mirrored));
+        }
+      }
+    }
+  }
+}
+
+TEST(AutoRotateDetector, ReportsTheAnchoredAndCurrentPositions) {
+  AutoRotateDetector d;
+  d.reset(500);
+  EXPECT_EQ(d.anchorZone(), AutoRotateDetector::NO_ZONE);
+  unsigned long now = 0;
+  hold(d, 90, now, 600);
+  EXPECT_EQ(d.currentZone(), 1);
+  EXPECT_EQ(d.anchorZone(), 1);
+}
