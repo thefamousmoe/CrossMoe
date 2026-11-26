@@ -36,8 +36,9 @@ Finds every place a name or phrase appears in the book, a bit like Kindle's X-Ra
 
 Lets EPUB and TXT books follow the way you hold the reader, using the X3's motion sensor. Turn it on in **Settings > Reader > Page Layout > Auto-Rotate**, or from the Reader Menu's **Layout** tab while reading:
 
-- **Flip only**: turning the reader upside down flips the page, for example when you switch hands.
-- **Flip and sideways**: also switches between portrait and landscape. Landscape lays the chapter out again, so expect a few seconds of **Loading** the first time.
+- **Flip**: turning the reader upside down flips the page, for example when you switch hands.
+- **Sideways**: switches between portrait and landscape (either way round), but never shows portrait upside down. Landscape lays the chapter out again, so expect a few seconds of **Loading** the first time.
+- **Flip + Sideways**: both.
 - **Rotation Delay** (Short / Normal / Long) sets how long the reader must rest in its new position first. Short is a quarter second.
 - A **Rotating** notice shows while the page turns.
 
