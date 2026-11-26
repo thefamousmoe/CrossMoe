@@ -354,6 +354,7 @@ void BookTextScanner::confirmCandidate(const bool nextIsWordChar) {
   hit.byteOffset = candidateOffset;
   hit.snippet.reserve(SNIPPET_BEFORE + query.size() + SNIPPET_AFTER + 8);
   if (cutLeading) hit.snippet = ELLIPSIS;
+  hit.snippetMatchOffset = static_cast<uint16_t>(hit.snippet.size() + (candidateStart - from));
   for (uint32_t i = from; i < emitted; ++i) hit.snippet += static_cast<char>(ringAt(i));
   hits.push_back(std::move(hit));
 

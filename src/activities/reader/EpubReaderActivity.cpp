@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <array>
+#include <climits>
 #include <cctype>
 #include <cstring>
 #include <iterator>
@@ -79,6 +80,7 @@
 #include "RecentBooksStore.h"
 #include "SdCardFont.h"
 #include "SdCardFontSystem.h"
+#include "SearchText.h"
 #include "SilentRestart.h"
 #include "WordRef.h"
 #include "activities/home/RecentBookProgress.h"
@@ -871,73 +873,14 @@ uint16_t resolveParagraphJumpPage(const Section& section, const uint16_t paragra
   return clampedFallback;
 }
 
-// Search Book lands on the paragraph's first page, but in a long paragraph the
-// hit can be on a later page. These check the laid-out pages for the text.
-
-// Lower-cases ASCII, removes soft hyphens and surrounding punctuation (ASCII
-// and typographic quotes, dashes, ellipses) and folds curly apostrophes, so a
-// page word compares equal to the selected search word.
-void normalizeSearchWord(const char* word, std::string& out) {
-  out.clear();
-  for (const char* p = word; *p != '\0';) {
-    const auto c = static_cast<unsigned char>(*p);
-    if (c == 0xC2 && static_cast<unsigned char>(p[1]) == 0xAD) {  // soft hyphen
-      p += 2;
-      continue;
-    }
-    if (c == 0xE2 && static_cast<unsigned char>(p[1]) == 0x80 && p[2] != '\0') {
-      const auto third = static_cast<unsigned char>(p[2]);
-      if (third == 0x98 || third == 0x99) {  // curly single quote or apostrophe
-        out.push_back('\'');
-      } else if (third == 0x93 || third == 0x94 || third == 0x9C || third == 0x9D || third == 0xA6) {
-        out.push_back(' ');  // dash, double quote, ellipsis: treated as punctuation
-      } else {
-        out.append(p, 3);
-      }
-      p += 3;
-      continue;
-    }
-    out.push_back(c < 0x80 ? static_cast<char>(std::tolower(c)) : static_cast<char>(c));
-    ++p;
-  }
-  const auto isEdgePunct = [](const char ch) {
-    const auto u = static_cast<unsigned char>(ch);
-    return u < 0x80 && (std::ispunct(u) || std::isspace(u));
-  };
-  size_t start = 0;
-  while (start < out.size() && isEdgePunct(out[start])) ++start;
-  size_t end = out.size();
-  while (end > start && isEdgePunct(out[end - 1])) --end;
-  out = out.substr(start, end - start);
-}
-
-// A page word matches a search token when equal, or when it extends the token
-// with a possessive or compound ("Galen's", "Galen-like"), as the search does.
-bool searchWordMatches(const std::string& pageWord, const std::string& token) {
-  if (pageWord.size() < token.size() || pageWord.compare(0, token.size(), token) != 0) return false;
-  return pageWord.size() == token.size() || pageWord[token.size()] == '\'' || pageWord[token.size()] == '-';
-}
-
-// Splits search text into normalized words.
-void searchTokensFor(const std::string& text, std::vector<std::string>& tokens) {
-  tokens.clear();
-  std::string token;
-  size_t pos = 0;
-  while (pos < text.size()) {
-    const size_t space = text.find(' ', pos);
-    const size_t end = space == std::string::npos ? text.size() : space;
-    normalizeSearchWord(text.substr(pos, end - pos).c_str(), token);
-    if (!token.empty()) tokens.push_back(token);
-    pos = end + 1;
-  }
-}
-
-// A page's visible words, normalized like search tokens. A word split across
-// lines by an inserted hyphen becomes one entry covering both page words.
+// Search Book: a page's visible words as normalized tokens (SearchText rules).
+// A word split across lines by an inserted hyphen is joined first; a word that
+// normalization splits (e.g. "Galen—who") gives several tokens. Each token
+// remembers the page words it came from, for drawing the highlight.
 struct SearchPageWords {
   std::vector<std::string> words;
-  std::vector<uint16_t> firstPageWord;  // page word index where each entry starts
-  std::vector<uint16_t> lastPageWord;   // ... and ends
+  std::vector<uint16_t> firstPageWord;
+  std::vector<uint16_t> lastPageWord;
 };
 
 void collectSearchPageWords(const Page& page, SearchPageWords& out) {
@@ -950,13 +893,12 @@ void collectSearchPageWords(const Page& page, SearchPageWords& out) {
   std::string pending;  // first half of a word split by an inserted hyphen
   uint16_t pendingFirst = 0;
   bool hasPending = false;
-  std::string normalized;
   const auto add = [&](const std::string& word, const uint16_t first, const uint16_t last) {
-    normalizeSearchWord(word.c_str(), normalized);
-    if (normalized.empty()) return;
-    out.words.push_back(normalized);
-    out.firstPageWord.push_back(first);
-    out.lastPageWord.push_back(last);
+    SearchText::forEachToken(word, [&](std::string token) {
+      out.words.push_back(std::move(token));
+      out.firstPageWord.push_back(first);
+      out.lastPageWord.push_back(last);
+    });
   };
   forEachVisiblePageWord(
       page, [&](const uint16_t pageWordIndex, const PageTextLine&, const TextBlock& block, const size_t i) {
@@ -977,64 +919,118 @@ void collectSearchPageWords(const Page& page, SearchPageWords& out) {
   if (hasPending) add(pending, pendingFirst, pendingFirst);
 }
 
-// Index of the first entry of each run in `words` that matches every token in order.
+// Calls callback(start) for each run of tokens matching the search words in
+// order; stops early when the callback returns false.
 template <typename Callback>
-void forEachSearchMatch(const SearchPageWords& page, const std::vector<std::string>& tokens, Callback&& callback) {
+void forEachSearchMatch(const std::vector<std::string>& words, const std::vector<std::string>& tokens,
+                        Callback&& callback) {
   if (tokens.empty()) return;
-  for (size_t start = 0; start + tokens.size() <= page.words.size(); ++start) {
+  for (size_t start = 0; start + tokens.size() <= words.size(); ++start) {
     size_t matched = 0;
-    while (matched < tokens.size() && searchWordMatches(page.words[start + matched], tokens[matched])) ++matched;
+    while (matched < tokens.size() && SearchText::wordMatches(words[start + matched], tokens[matched])) ++matched;
     if (matched == tokens.size() && !callback(start)) return;
   }
 }
 
-// True when the page shows every word of the search, in order and next to each other.
-bool pageShowsSearchText(Section& section, const uint16_t pageIndex, const std::vector<std::string>& tokens) {
-  if (tokens.empty()) return false;
+// One page reduced to word fingerprints plus where the search matches start,
+// so several nearby pages can be compared without keeping their text.
+struct SearchPageSummary {
+  bool loaded = false;
+  std::vector<uint16_t> hashes;
+  std::vector<uint16_t> matchStarts;
+};
+
+bool summarizeSearchPage(Section& section, const int pageIndex, const std::vector<std::string>& tokens,
+                         SearchPageSummary& out) {
+  out.loaded = false;
+  out.hashes.clear();
+  out.matchStarts.clear();
+  if (pageIndex < 0 || pageIndex >= static_cast<int>(section.pageCount)) return false;
   auto page = section.loadPage(pageIndex);
   if (!page) return false;
   SearchPageWords words;
   collectSearchPageWords(*page, words);
-  bool found = false;
-  forEachSearchMatch(words, tokens, [&](size_t) {
-    found = true;
-    return false;
+  out.hashes.reserve(words.words.size());
+  for (const auto& word : words.words) out.hashes.push_back(SearchText::wordHash(word));
+  forEachSearchMatch(words.words, tokens, [&](const size_t start) {
+    out.matchStarts.push_back(static_cast<uint16_t>(start));
+    return true;
   });
-  return found;
+  out.loaded = true;
+  return true;
 }
 
-// Moves a resolved search jump forward to the first page of the hit's paragraph
-// that shows the search text. Keeps `page` when none does (for example when
-// the hit's words are split across a page break).
-uint16_t refineSearchJumpPage(Section& section, const uint16_t paragraphIndex, const uint16_t page,
-                              const std::string& text) {
-  if (text.empty() || section.pageCount == 0 || page >= section.pageCount) return page;
-
-  std::vector<std::string> tokens;
-  searchTokensFor(text, tokens);
-  if (tokens.empty()) return page;
-
-  // The paragraph ends on the page where the next one starts, at the latest.
-  constexpr uint16_t MAX_PAGES_CHECKED = 6;
-  uint16_t lastPage = static_cast<uint16_t>(std::min<int>(page + MAX_PAGES_CHECKED - 1, section.pageCount - 1));
-  if (paragraphIndex < UINT16_MAX - 1) {
-    const auto nextParagraphPage = section.getPageForParagraphIndex(static_cast<uint16_t>(paragraphIndex + 1));
-    if (nextParagraphPage.has_value() && *nextParagraphPage >= page && *nextParagraphPage < lastPage) {
-      lastPage = *nextParagraphPage;
+// How well a match agrees with the remembered neighbor words, 0-4. Words
+// before the page start come from the previous page, words after its end from
+// the next, so a match beside a page break still scores.
+int searchContextScore(const SearchPageSummary& prev, const SearchPageSummary& cur, const SearchPageSummary& next,
+                       const size_t start, const size_t length, const uint16_t context[4]) {
+  const auto wordAt = [&](const long index) -> uint16_t {
+    if (index < 0) {
+      const long fromEnd = static_cast<long>(prev.hashes.size()) + index;
+      return fromEnd >= 0 ? prev.hashes[static_cast<size_t>(fromEnd)] : 0;
     }
+    if (index < static_cast<long>(cur.hashes.size())) return cur.hashes[static_cast<size_t>(index)];
+    const long intoNext = index - static_cast<long>(cur.hashes.size());
+    return intoNext < static_cast<long>(next.hashes.size()) ? next.hashes[static_cast<size_t>(intoNext)] : 0;
+  };
+  const long s = static_cast<long>(start);
+  const long e = s + static_cast<long>(length);
+  const uint16_t found[4] = {wordAt(s - 2), wordAt(s - 1), wordAt(e), wordAt(e + 1)};
+  int score = 0;
+  for (int i = 0; i < 4; ++i) {
+    if (context[i] != 0 && found[i] == context[i]) ++score;
   }
+  return score;
+}
+
+// Finds the page that shows this match: the one near `page` (resolved from the
+// paragraph and position) whose occurrence of the search words has the same
+// neighboring words as the result. Falls back to the nearest page showing the
+// words at all, then to `page`. Loads at most ~12 pages, briefly.
+uint16_t locateSearchMatchPage(Section& section, const uint16_t page, const std::vector<std::string>& tokens,
+                               const uint16_t context[4]) {
+  if (tokens.empty() || section.pageCount == 0) return page;
+  const int pageCount = static_cast<int>(section.pageCount);
+  const int center = std::min<int>(page, pageCount - 1);
+  constexpr int BEFORE = 3;
+  constexpr int AFTER = 6;
+  const int first = std::max(0, center - BEFORE);
+  const int last = std::min(pageCount - 1, center + AFTER);
+  const bool hasContext = context[0] || context[1] || context[2] || context[3];
 
   const int savedPage = section.currentPage;
-  uint16_t found = page;
-  for (uint16_t candidate = page; candidate <= lastPage; ++candidate) {
-    if (pageShowsSearchText(section, candidate, tokens)) {
-      found = candidate;
-      break;
+  SearchPageSummary prev;
+  SearchPageSummary cur;
+  SearchPageSummary next;
+  summarizeSearchPage(section, first - 1, tokens, prev);
+  summarizeSearchPage(section, first, tokens, cur);
+  int bestPage = -1;
+  int bestScore = -1;
+  int bestDistance = INT_MAX;
+  for (int index = first; index <= last; ++index) {
+    summarizeSearchPage(section, index + 1, tokens, next);
+    if (cur.loaded) {
+      for (const uint16_t start : cur.matchStarts) {
+        const int score = hasContext ? searchContextScore(prev, cur, next, start, tokens.size(), context) : 0;
+        const int distance = std::abs(index - center);
+        if (score > bestScore || (score == bestScore && distance < bestDistance)) {
+          bestScore = score;
+          bestDistance = distance;
+          bestPage = index;
+        }
+      }
     }
+    std::swap(prev, cur);
+    std::swap(cur, next);
   }
   section.currentPage = savedPage;
-  if (found != page) LOG_DBG("ERS", "Search jump moved from page %u to %u", page, found);
-  return found;
+  if (bestPage < 0) {
+    LOG_INF("ERS", "Search match not found near page %u", page);
+    return page;
+  }
+  LOG_INF("ERS", "Search match on page %d (from %u, context score %d)", bestPage, page, bestScore);
+  return static_cast<uint16_t>(bestPage);
 }
 
 uint8_t tableColumnForSelection(const uint16_t tableSelection) {
@@ -6232,7 +6228,7 @@ void EpubReaderActivity::openBookSearch(const std::string& text) {
 
 void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match, const std::string& text) {
   searchText = text;
-  searchTokensFor(searchText, searchTokens);
+  SearchText::tokens(searchText, searchTokens);
   searchHighlightActive = !searchTokens.empty();
   const int selected = searchSelection.selected;
   if (selected >= 0 && selected < static_cast<int>(searchSelection.hits.size())) {
@@ -6265,10 +6261,8 @@ void EpubReaderActivity::jumpToSearchHit(const int index) {
       section->currentPage = hit.paragraphIndex != UINT16_MAX
                                  ? resolveParagraphJumpPage(*section, hit.paragraphIndex, fallbackPage)
                                  : fallbackPage;
-      if (hit.paragraphIndex != UINT16_MAX) {
-        section->currentPage =
-            refineSearchJumpPage(*section, hit.paragraphIndex, static_cast<uint16_t>(section->currentPage), searchText);
-      }
+      section->currentPage = locateSearchMatchPage(*section, static_cast<uint16_t>(std::max(0, section->currentPage)),
+                                                   searchTokens, hit.context);
       nextPageNumber = section->currentPage;
       pendingPercentJump = false;
       pendingParagraphIndex = UINT16_MAX;
@@ -6278,6 +6272,7 @@ void EpubReaderActivity::jumpToSearchHit(const int index) {
       pendingSpineProgress = hit.chapterProgress;
       pendingParagraphIndex = hit.paragraphIndex;
       pendingSearchText = searchText;
+      std::copy(std::begin(hit.context), std::end(hit.context), std::begin(pendingSearchContext));
       pendingPercentJump = true;
       section.reset();
     }
@@ -6335,7 +6330,7 @@ void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId
   // Page words to box, as [first, last] page word index ranges.
   std::array<std::pair<uint16_t, uint16_t>, 16> ranges{};
   size_t rangeCount = 0;
-  forEachSearchMatch(words, searchTokens, [&](const size_t start) {
+  forEachSearchMatch(words.words, searchTokens, [&](const size_t start) {
     const size_t end = start + searchTokens.size() - 1;
     ranges[rangeCount++] = {words.firstPageWord[start], words.lastPageWord[end]};
     return rangeCount < ranges.size();
@@ -7671,9 +7666,11 @@ void EpubReaderActivity::render(RenderLock&& lock) {
       } else if (pendingParagraphIndex != UINT16_MAX) {
         const uint16_t fallbackPage = static_cast<uint16_t>(std::max(0, section->currentPage));
         section->currentPage = resolveParagraphJumpPage(*section, pendingParagraphIndex, fallbackPage);
-        section->currentPage = refineSearchJumpPage(*section, pendingParagraphIndex,
-                                                    static_cast<uint16_t>(section->currentPage), pendingSearchText);
         LOG_DBG("ERS", "Resolved paragraph %u to page %d", pendingParagraphIndex, section->currentPage);
+      }
+      if (!pendingSearchText.empty()) {
+        section->currentPage = locateSearchMatchPage(*section, static_cast<uint16_t>(std::max(0, section->currentPage)),
+                                                     searchTokens, pendingSearchContext);
       }
       pendingClippingIndex = UINT16_MAX;
       pendingParagraphIndex = UINT16_MAX;
@@ -7723,9 +7720,11 @@ void EpubReaderActivity::render(RenderLock&& lock) {
       } else if (pendingParagraphIndex != UINT16_MAX) {
         const uint16_t fallbackPage = static_cast<uint16_t>(std::max(0, section->currentPage));
         section->currentPage = resolveParagraphJumpPage(*section, pendingParagraphIndex, fallbackPage);
-        section->currentPage = refineSearchJumpPage(*section, pendingParagraphIndex,
-                                                    static_cast<uint16_t>(section->currentPage), pendingSearchText);
         LOG_DBG("ERS", "Resolved paragraph %u to page %d", pendingParagraphIndex, section->currentPage);
+      }
+      if (!pendingSearchText.empty()) {
+        section->currentPage = locateSearchMatchPage(*section, static_cast<uint16_t>(std::max(0, section->currentPage)),
+                                                     searchTokens, pendingSearchContext);
       }
       pendingClippingIndex = UINT16_MAX;
       pendingParagraphIndex = UINT16_MAX;

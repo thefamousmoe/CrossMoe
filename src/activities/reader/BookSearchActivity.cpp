@@ -13,6 +13,7 @@
 
 #include "FilenameFontSystem.h"
 #include "MappedInputManager.h"
+#include "SearchText.h"
 #include "components/TouchHeaderBackButton.h"
 #include "components/UITheme.h"
 #include "components/UIThemeTokens.h"
@@ -144,11 +145,17 @@ void BookSearchActivity::selectResult() {
   if (selectedIndex < 0 || selectedIndex >= static_cast<int>(scanner.hits.size())) return;
   const auto& hit = scanner.hits[static_cast<size_t>(selectedIndex)];
   if (selectionOut) {
-    // At most MAX_HITS (200) entries of 8 bytes, so ~1.6 KB for previous/next stepping.
+    // At most MAX_HITS (200) entries of 16 bytes, so ~3.2 KB for previous/next stepping.
     selectionOut->hits.clear();
     selectionOut->hits.reserve(scanner.hits.size());
-    for (const auto& h : scanner.hits)
-      selectionOut->hits.push_back({h.spineIndex, h.paragraphIndex, h.chapterProgress});
+    std::vector<std::string> queryTokens;
+    SearchText::tokens(query, queryTokens);
+    for (const auto& h : scanner.hits) {
+      BookSearchHitRef ref{h.spineIndex, h.paragraphIndex, h.chapterProgress, {0, 0, 0, 0}};
+      SearchText::contextFromSnippet(h.snippet, h.snippetMatchOffset, std::max<size_t>(1, queryTokens.size()),
+                                     ref.context);
+      selectionOut->hits.push_back(ref);
+    }
     selectionOut->selected = selectedIndex;
   }
   setResult(BookmarkResult{hit.spineIndex, hit.chapterProgress, hit.paragraphIndex});

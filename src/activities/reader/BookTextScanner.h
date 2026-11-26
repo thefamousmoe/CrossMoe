@@ -19,6 +19,7 @@ class BookTextScanner final : public Print {
     float chapterProgress = 0.0f;
     uint8_t bookPercent = 0;
     std::string snippet;
+    uint16_t snippetMatchOffset = 0;  // byte where the match starts in `snippet`
   };
 
   static constexpr size_t MAX_HITS = 200;

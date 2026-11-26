@@ -2,10 +2,10 @@
 
 ### Added
 
-- Zoom Image opens the largest picture on the page full screen. Confirm zooms in up to 4x (as far as the picture has detail), Back zooms out, and the direction buttons pan. Each zoom level is drawn in gray from a temporary SD card copy, so moving around is quick. Open it from the Reader Menu's More tab, Quick Actions, or a button shortcut.
+- Zoom Image opens the largest picture on the page full screen. Confirm zooms in to 2x and 3x, Back zooms out, and the direction buttons pan. Each zoom level is drawn in gray from a temporary SD card copy, so moving around is quick. Open it from the Reader Menu's More tab, Quick Actions, or a button shortcut.
 - Search Book finds every place a word or phrase appears in an EPUB, with a progress bar, and jumps to a result. Back returns to where you were. Open it from the Reader Menu's More tab, Quick Actions, or a button shortcut.
 - Auto-Rotate in `Settings > Reader > Page Layout` and the Reader Menu's Layout tab follows the device's motion sensor in EPUB and TXT books: upside-down flips only, or flips and sideways turns, with a Short, Normal, or Long rotation delay. It starts as soon as a book opens or the reader wakes.
-- After a Search Book jump the match is boxed with a match counter; Left/Right step to the previous/next match and Back clears the highlight.
+- Search Book lands on the page showing the chosen match, recognized by the words around it. After a jump the match is boxed with a match counter; Left/Right step to the previous/next match and Back clears the highlight.
 
 ### Fixed
 

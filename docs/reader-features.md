@@ -220,9 +220,7 @@ Back/Menu).
 
 In the viewer:
 
-- **Confirm** zooms in: fitted, 2x, 3x, up to 4x. Levels that would only
-  enlarge the picture's own pixels are skipped, so small pictures stop at 2x
-  or 3x.
+- **Confirm** zooms in: fitted, 2x, then 3x.
 - **Back** zooms out one level at a time. From the fitted view it returns to
   the book.
 - **Left/Right** and **Up/Down** move around the zoomed picture. If the picture

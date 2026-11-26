@@ -284,9 +284,10 @@ class EpubReaderActivity final : public Activity {
   uint16_t pendingParagraphIndex = UINT16_MAX;
   // Search Book text for the pending paragraph jump, to land on the page showing it.
   std::string pendingSearchText;
+  uint16_t pendingSearchContext[4] = {};
   // Search highlight mode: after a Search Book jump the match is boxed on the
   // page, Left/Right step through matches and Back leaves the mode. The match
-  // list is ~8 bytes per match (at most 200) and is freed when the mode ends.
+  // list is ~16 bytes per match (at most 200) and is freed when the mode ends.
   BookSearchSelection searchSelection;
   std::vector<std::string> searchTokens;
   std::string searchText;
