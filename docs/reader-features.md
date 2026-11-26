@@ -220,18 +220,21 @@ Back/Menu).
 
 In the viewer:
 
-- **Confirm** zooms in: fitted, 2x, 3x, 4x, then back to fitted. Small
-  pictures look softer at the higher levels.
+- **Confirm** zooms in: fitted, 2x, 3x, up to 4x. Levels that would only
+  enlarge the picture's own pixels are skipped, so small pictures stop at 2x
+  or 3x.
+- **Back** zooms out one level at a time. From the fitted view it returns to
+  the book.
 - **Left/Right** and **Up/Down** move around the zoomed picture. If the picture
   only extends in one direction, every direction button moves along it.
-- **Back** returns to the book.
 
 The first time you open each zoom level, the viewer shows **Loading** while it
 decodes the whole picture in shades of gray and saves it to a temporary file
 on the SD card. Moving around that level then reads straight from the file, so
-pans are quick and look as sharp as the page. The temporary files are deleted
-when you leave the viewer. If the file can't be written, the viewer falls back
-to drawing each view in black and white.
+pans are quick and look as sharp as the page. Every new view starts with a
+clean screen refresh so the previous view does not show through. The temporary
+files are deleted when you leave the viewer. If a level's file can't be
+written, the viewer stays on the previous level.
 
 JPEG and PNG pictures can be zoomed; other formats are shown fitted to the
 screen.
@@ -249,8 +252,10 @@ like looking up a character in an X-Ray panel. Open it from the Reader Menu's
 3. A progress bar fills while every chapter is searched. Hold **Back** to stop.
 4. The results list shows each match with a little of the surrounding text,
    its chapter, and its position in the book. Choose one to jump there.
-5. Press **Back** on the page you jumped to and you return to where you were
-   reading, just like after following a footnote.
+5. On that page the match is boxed and a counter such as **3/17** shows in the
+   top-right corner. **Left** and **Right** jump to the previous and next match
+   anywhere in the book.
+6. Press **Back** to clear the highlight and keep reading from there.
 
 Matching ignores letter case and only matches whole words, so searching
 "Vin" finds "Vin" and "Vin's" but not "Vindication". The first 200 matches are
@@ -437,7 +442,7 @@ recent books once you reach its end.
 
 On readers with a motion sensor (such as the Xteink X3), EPUB and TXT books can
 follow the way you hold the device. Turn it on in **Settings > Reader > Page
-Layout > Auto-Rotate**:
+Layout > Auto-Rotate**, or from the Reader Menu's **Layout** tab while reading:
 
 - **Off**: the page only rotates when you choose an orientation.
 - **Flip only**: turning the device upside down flips the page, for example
@@ -452,12 +457,14 @@ or Long (1.6 s / 3 s). It shows as Disabled while Auto-Rotate is off.
 
 How it behaves:
 
-- It starts working after you press any button in the book, such as turning a
-  page. That tells it which way up you are reading.
+- It starts working on its own when you open a book or wake the reader: once
+  you hold the reader still for about half a second, it takes that as the way
+  up you are reading. Pressing any button in the book does the same at once.
 - It ignores the device while it lies flat (on a table, or face-up in bed) and
   while it is moving.
-- Choosing an orientation by hand pauses auto-rotate until your next button
-  press, so it does not undo your choice.
+- Choosing an orientation by hand pauses auto-rotate until you have held the
+  reader still for 3 seconds or press a button, so it does not undo your
+  choice.
 - If a sideways turn ever comes out upside down, use **Rotate Page 180°**
   within 20 seconds. The reader remembers the correction for future turns.
 - Turn on **Orientation Aware** for the front and side buttons in Controls so

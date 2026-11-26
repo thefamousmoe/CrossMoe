@@ -8,8 +8,8 @@
 // only one reader is open at a time, so the state is a single static.
 namespace ReaderAutoRotate {
 
-// Call when a reader opens: the position the device is held in is not known
-// until the first button page turn.
+// Call when a reader opens: the position the device is held in is adopted
+// once it is held still briefly (or at the first button press).
 void onReaderEnter();
 
 // Call once per reader loop() while the page is showing. Returns the

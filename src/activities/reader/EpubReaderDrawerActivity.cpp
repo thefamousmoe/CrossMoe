@@ -6,6 +6,7 @@
 #include <GfxRenderer.h>
 #include <HalGPIO.h>
 #include <HalStorage.h>
+#include <HalTiltSensor.h>
 #include <I18n.h>
 #include <Logging.h>
 #include <Memory.h>
@@ -516,7 +517,7 @@ void EpubReaderDrawerActivity::onEnter() {
 
   const ReaderDrawerCatalog catalog = makeReaderDrawerCatalog(
       {hasFootnotes, hasDictionary, hasBookmarks, hasClippings, showReadingPaceReset, stablePageCount > 0,
-       !mappedInput.hasTouchHardware(), globalStatsEnabled, bookStatsEnabled});
+       !mappedInput.hasTouchHardware(), globalStatsEnabled, bookStatsEnabled, halTiltSensor.isAvailable()});
   for (size_t tab = 0; tab < rootRows.size(); ++tab) {
     rootRows[tab].reserve(catalog[tab].count);
     rootRows[tab].assign(catalog[tab].items.begin(), catalog[tab].items.begin() + catalog[tab].count);
@@ -1831,6 +1832,8 @@ void EpubReaderDrawerActivity::activateRow(const RowId row) {
     case RowId::DictionaryFontFamily:
     case RowId::DictionaryFontSize:
     case RowId::Orientation:
+    case RowId::AutoRotate:
+    case RowId::RotationDelay:
     case RowId::Alignment:
     case RowId::Images:
     case RowId::PublisherFonts:
@@ -2088,6 +2091,20 @@ void EpubReaderDrawerActivity::showEnumOptions(const RowId row) {
              CrossPointSettings::INVERTED};
       currentRaw = draft.orientation;
       break;
+    case RowId::AutoRotate:
+      title = StrId::STR_AUTO_ROTATE;
+      labels = {tr(STR_OFF), tr(STR_AUTO_ROTATE_FLIP_ONLY), tr(STR_AUTO_ROTATE_ALL)};
+      raw = {CrossPointSettings::AUTO_ROTATE_OFF, CrossPointSettings::AUTO_ROTATE_FLIP_ONLY,
+             CrossPointSettings::AUTO_ROTATE_ALL};
+      currentRaw = SETTINGS.autoRotate;
+      break;
+    case RowId::RotationDelay:
+      title = StrId::STR_ROTATION_DELAY;
+      labels = {tr(STR_ROTATION_DELAY_SHORT), tr(STR_SENSITIVITY_NORMAL), tr(STR_ROTATION_DELAY_LONG)};
+      raw = {CrossPointSettings::AUTO_ROTATE_DELAY_SHORT, CrossPointSettings::AUTO_ROTATE_DELAY_NORMAL,
+             CrossPointSettings::AUTO_ROTATE_DELAY_LONG};
+      currentRaw = SETTINGS.autoRotateDelay;
+      break;
     case RowId::Alignment:
       title = StrId::STR_PARA_ALIGNMENT;
       labels = {tr(STR_JUSTIFY), tr(STR_DIR_LEFT), tr(STR_CENTER), tr(STR_DIR_RIGHT), tr(STR_BOOK_S_STYLE)};
@@ -2220,6 +2237,16 @@ void EpubReaderDrawerActivity::selectEnumOption(const int index) {
     case RowId::Orientation:
       draft.orientation = value;
       markSettingChanged(ReaderSettingsChangeMask::Orientation);
+      break;
+    case RowId::AutoRotate:
+    case RowId::RotationDelay:
+      // Device-wide preferences, not per-book reader settings: save at once.
+      if (enumOptionRow == RowId::AutoRotate) {
+        SETTINGS.autoRotate = value;
+      } else {
+        SETTINGS.autoRotateDelay = value;
+      }
+      SETTINGS.saveToFile();
       break;
     case RowId::Alignment:
       draft.paragraphAlignment = value;
@@ -3230,6 +3257,10 @@ const char* EpubReaderDrawerActivity::rowLabel(const RowId row) const {
       return tr(STR_SCREEN_MARGIN);
     case RowId::Orientation:
       return tr(STR_ORIENTATION);
+    case RowId::AutoRotate:
+      return tr(STR_AUTO_ROTATE);
+    case RowId::RotationDelay:
+      return tr(STR_ROTATION_DELAY);
     case RowId::Alignment:
       return tr(STR_PARA_ALIGNMENT);
     case RowId::Hyphenation:
@@ -3411,6 +3442,17 @@ const char* EpubReaderDrawerActivity::rowValue(const RowId row, char* buffer, co
 #endif
     case RowId::Orientation: {
       return I18N.get(readerOrientationLabel(draft.orientation));
+    }
+    case RowId::AutoRotate: {
+      static constexpr std::array<StrId, 3> labels = {StrId::STR_OFF, StrId::STR_AUTO_ROTATE_FLIP_ONLY,
+                                                      StrId::STR_AUTO_ROTATE_ALL};
+      return I18N.get(labels[std::min<size_t>(SETTINGS.autoRotate, labels.size() - 1)]);
+    }
+    case RowId::RotationDelay: {
+      if (SETTINGS.autoRotate == CrossPointSettings::AUTO_ROTATE_OFF) return tr(STR_DISABLED);
+      static constexpr std::array<StrId, 3> labels = {StrId::STR_ROTATION_DELAY_SHORT, StrId::STR_SENSITIVITY_NORMAL,
+                                                      StrId::STR_ROTATION_DELAY_LONG};
+      return I18N.get(labels[std::min<size_t>(SETTINGS.autoRotateDelay, labels.size() - 1)]);
     }
     case RowId::Alignment: {
       static const std::array<StrId, 5> labels = {StrId::STR_JUSTIFY, StrId::STR_DIR_LEFT, StrId::STR_CENTER,

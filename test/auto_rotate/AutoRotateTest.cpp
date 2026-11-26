@@ -117,6 +117,31 @@ TEST(AutoRotateDetector, ResetForgetsTheAnchor) {
   EXPECT_EQ(hold(d, 180, now, 3000), 0);
 }
 
+TEST(AutoRotateDetector, AutoAnchorsAfterHoldingStillThenRotates) {
+  AutoRotateDetector d;
+  d.reset(/*autoAnchorMs=*/600);
+  unsigned long now = 0;
+  EXPECT_EQ(hold(d, 0, now, 300), 0);
+  EXPECT_FALSE(d.hasAnchor());
+  EXPECT_EQ(hold(d, 0, now, 400), 0);
+  EXPECT_TRUE(d.hasAnchor());  // held still ~0.7 s: no button press needed
+  EXPECT_EQ(hold(d, 180, now, 1100), 2);
+}
+
+TEST(AutoRotateDetector, AutoAnchorWaitsForStillnessAndIgnoresFlat) {
+  AutoRotateDetector d;
+  d.reset(600);
+  unsigned long now = 0;
+  hold(d, 0, now, 2000, true, /*flat=*/80);
+  EXPECT_FALSE(d.hasAnchor());  // lying flat never anchors
+  hold(d, 0, now, 400);
+  hold(d, 90, now, 400);  // moved before the hold time passed
+  EXPECT_FALSE(d.hasAnchor());
+  hold(d, 90, now, 300);
+  EXPECT_TRUE(d.hasAnchor());
+  EXPECT_EQ(hold(d, 90, now, 3000), 0);  // anchored here, so no turn
+}
+
 TEST(ReaderAutoRotate, FlipsAreAlwaysTheOppositeOrientation) {
   for (uint8_t o = 0; o < 4; ++o) {
     EXPECT_EQ(ReaderAutoRotate::orientationAfterTurns(o, 2, false), (o + 2) % 4);

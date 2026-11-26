@@ -125,17 +125,30 @@ TEST(ReaderDrawerModel, CatalogOrderAndConditionalRowsMatchTouchDesign) {
   EXPECT_EQ(layout.items[4], ReaderDrawerCatalogItem::Hyphenation);
 
   const auto& minimalMore = minimal[static_cast<size_t>(ReaderDrawerTab::More)];
-  EXPECT_EQ(minimalMore.count, 3);
-  EXPECT_EQ(minimalMore.items[0], ReaderDrawerCatalogItem::SelectChapter);
-  EXPECT_EQ(minimalMore.items[2], ReaderDrawerCatalogItem::AutoPageTurn);
+  EXPECT_EQ(minimalMore.count, 5);
+  EXPECT_EQ(minimalMore.items[0], ReaderDrawerCatalogItem::SearchBook);
+  EXPECT_EQ(minimalMore.items[1], ReaderDrawerCatalogItem::ZoomImage);
+  EXPECT_EQ(minimalMore.items[2], ReaderDrawerCatalogItem::SelectChapter);
+  EXPECT_EQ(minimalMore.items[4], ReaderDrawerCatalogItem::AutoPageTurn);
 
   ReaderDrawerAvailability stableAvailable{};
   stableAvailable.hasStablePageNumbers = true;
   const ReaderDrawerCatalog stableCatalog = makeReaderDrawerCatalog(stableAvailable);
   const auto& stableMore = stableCatalog[static_cast<size_t>(ReaderDrawerTab::More)];
-  EXPECT_EQ(stableMore.count, 4);
-  EXPECT_EQ(stableMore.items[1], ReaderDrawerCatalogItem::GoToPercent);
-  EXPECT_EQ(stableMore.items[2], ReaderDrawerCatalogItem::GoToStablePage);
+  EXPECT_EQ(stableMore.count, 6);
+  EXPECT_EQ(stableMore.items[3], ReaderDrawerCatalogItem::GoToPercent);
+  EXPECT_EQ(stableMore.items[4], ReaderDrawerCatalogItem::GoToStablePage);
+
+  // Auto-Rotate rows follow Orientation only on readers with a motion sensor.
+  EXPECT_EQ(layout.items[1], ReaderDrawerCatalogItem::Orientation);
+  ReaderDrawerAvailability sensorAvailable{};
+  sensorAvailable.hasMotionSensor = true;
+  const ReaderDrawerCatalog sensorCatalog = makeReaderDrawerCatalog(sensorAvailable);
+  const auto& sensorLayout = sensorCatalog[static_cast<size_t>(ReaderDrawerTab::Layout)];
+  EXPECT_EQ(sensorLayout.count, 11);
+  EXPECT_EQ(sensorLayout.items[1], ReaderDrawerCatalogItem::Orientation);
+  EXPECT_EQ(sensorLayout.items[2], ReaderDrawerCatalogItem::AutoRotate);
+  EXPECT_EQ(sensorLayout.items[3], ReaderDrawerCatalogItem::RotationDelay);
 
   const auto& minimalLocation = minimal[static_cast<size_t>(ReaderDrawerTab::Location)];
   EXPECT_EQ(minimalLocation.count, 4);
@@ -144,13 +157,15 @@ TEST(ReaderDrawerModel, CatalogOrderAndConditionalRowsMatchTouchDesign) {
 
   const ReaderDrawerCatalog complete = makeReaderDrawerCatalog({true, true, true, true, true, true});
   const auto& more = complete[static_cast<size_t>(ReaderDrawerTab::More)];
-  EXPECT_EQ(more.count, 7);
+  EXPECT_EQ(more.count, 9);
   EXPECT_EQ(more.items[0], ReaderDrawerCatalogItem::Lookup);
   EXPECT_EQ(more.items[1], ReaderDrawerCatalogItem::LookupHistory);
-  EXPECT_EQ(more.items[2], ReaderDrawerCatalogItem::SelectChapter);
-  EXPECT_EQ(more.items[3], ReaderDrawerCatalogItem::GoToPercent);
-  EXPECT_EQ(more.items[4], ReaderDrawerCatalogItem::GoToStablePage);
-  EXPECT_EQ(more.items[5], ReaderDrawerCatalogItem::AutoPageTurn);
+  EXPECT_EQ(more.items[2], ReaderDrawerCatalogItem::SearchBook);
+  EXPECT_EQ(more.items[3], ReaderDrawerCatalogItem::ZoomImage);
+  EXPECT_EQ(more.items[4], ReaderDrawerCatalogItem::SelectChapter);
+  EXPECT_EQ(more.items[5], ReaderDrawerCatalogItem::GoToPercent);
+  EXPECT_EQ(more.items[6], ReaderDrawerCatalogItem::GoToStablePage);
+  EXPECT_EQ(more.items[7], ReaderDrawerCatalogItem::AutoPageTurn);
 
   const auto& location = complete[static_cast<size_t>(ReaderDrawerTab::Location)];
   EXPECT_EQ(location.count, 7);
@@ -176,7 +191,7 @@ TEST(ReaderDrawerModel, StatsRowsFollowGlobalAndBookTrackingChoices) {
   available.buttonDevice = true;
   available.bookStatsEnabled = false;
   auto catalog = makeReaderDrawerCatalog(available);
-  EXPECT_EQ(catalog[static_cast<size_t>(ReaderDrawerTab::More)].count, 3);
+  EXPECT_EQ(catalog[static_cast<size_t>(ReaderDrawerTab::More)].count, 5);  // incl. Search Book, Zoom Image
   const auto& settings = catalog[static_cast<size_t>(ReaderDrawerTab::Settings)];
   EXPECT_EQ(settings.items[6], ReaderDrawerCatalogItem::TrackBookStats);
   EXPECT_EQ(settings.items[settings.count - 1], ReaderDrawerCatalogItem::ResetBookReaderSettings);
@@ -195,8 +210,8 @@ TEST(ReaderDrawerModel, ButtonDevicesRestoreStatsAndTransfersInTheirTabs) {
   available.buttonDevice = true;
   const ReaderDrawerCatalog catalog = makeReaderDrawerCatalog(available);
   const auto& more = catalog[static_cast<size_t>(ReaderDrawerTab::More)];
-  EXPECT_EQ(more.count, 4);
-  EXPECT_EQ(more.items[3], ReaderDrawerCatalogItem::ReadingStats);
+  EXPECT_EQ(more.count, 6);  // incl. Search Book, Zoom Image
+  EXPECT_EQ(more.items[5], ReaderDrawerCatalogItem::ReadingStats);
 
   const auto& location = catalog[static_cast<size_t>(ReaderDrawerTab::Location)];
   EXPECT_EQ(location.count, 7);

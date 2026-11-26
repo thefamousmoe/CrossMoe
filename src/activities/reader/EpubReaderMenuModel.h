@@ -161,6 +161,8 @@ enum class ReaderDrawerCatalogItem : uint8_t {
   BookWordHoldAction,
   SearchBook,
   ZoomImage,
+  AutoRotate,
+  RotationDelay,
 };
 
 struct ReaderDrawerAvailability {
@@ -173,6 +175,7 @@ struct ReaderDrawerAvailability {
   bool buttonDevice = false;
   bool globalStatsEnabled = true;
   bool bookStatsEnabled = true;
+  bool hasMotionSensor = false;  // Auto-Rotate rows need the IMU
 };
 
 struct ReaderDrawerTabCatalog {
@@ -205,6 +208,10 @@ constexpr ReaderDrawerCatalog makeReaderDrawerCatalog(const ReaderDrawerAvailabi
   auto& layout = catalog[static_cast<size_t>(ReaderDrawerTab::Layout)];
   layout.add(ReaderDrawerCatalogItem::Margins);
   layout.add(ReaderDrawerCatalogItem::Orientation);
+  if (available.hasMotionSensor) {
+    layout.add(ReaderDrawerCatalogItem::AutoRotate);
+    layout.add(ReaderDrawerCatalogItem::RotationDelay);
+  }
   layout.add(ReaderDrawerCatalogItem::Alignment);
   layout.add(ReaderDrawerCatalogItem::Images);
   layout.add(ReaderDrawerCatalogItem::Hyphenation);

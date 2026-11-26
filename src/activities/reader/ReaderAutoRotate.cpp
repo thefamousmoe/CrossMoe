@@ -108,7 +108,7 @@ int poll(const uint8_t currentOrientation) {
       LOG_INF("ROT", "Sideways direction corrected by hand; mirrored=%d", state.mirrored ? 1 : 0);
     }
     state.lastAutoWasSideways = false;
-    halTiltSensor.resetAutoRotate();
+    halTiltSensor.resetAutoRotate(HalTiltSensor::AUTO_ANCHOR_AFTER_MANUAL_MS);
   }
   state.lastOrientation = currentOrientation;
 
