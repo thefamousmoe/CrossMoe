@@ -17,9 +17,6 @@
 namespace {
 // Keep the zoomed image within sizes the decoders and the 16-bit cache header handle.
 constexpr int MAX_ZOOMED_EDGE = 6144;
-// Levels may enlarge the picture's own pixels by this much before stopping;
-// beyond it the view only gets blurrier. 2x is always offered.
-constexpr int NATIVE_OVERZOOM_PERCENT = 110;
 }  // namespace
 
 ImageZoomActivity::ImageZoomActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
@@ -29,17 +26,15 @@ ImageZoomActivity::ImageZoomActivity(GfxRenderer& renderer, MappedInputManager& 
 void ImageZoomActivity::onEnter() {
   Activity::onEnter();
 
-  // Stop offering levels that would only enlarge the picture's own pixels.
+  // Logged to help diagnose pictures that look soft or will not zoom.
   int sourceWidth = 0;
   int sourceHeight = 0;
   if (canZoom() && image->sourceDimensions(sourceWidth, sourceHeight)) {
     int fitWidth = 0;
     int fitHeight = 0;
     zoomedSize(1, fitWidth, fitHeight);
-    const int levels = sourceWidth * NATIVE_OVERZOOM_PERCENT / 100 / std::max(1, fitWidth);
-    maxZoom = std::clamp(levels, 2, static_cast<int>(MAX_ZOOM));
-    LOG_INF("ZOOM", "Source %dx%d, fitted %dx%d, max zoom %dx, path %s", sourceWidth, sourceHeight, fitWidth, fitHeight,
-            maxZoom, image->getImagePath().c_str());
+    LOG_INF("ZOOM", "Source %dx%d, fitted %dx%d, path %s", sourceWidth, sourceHeight, fitWidth, fitHeight,
+            image->getImagePath().c_str());
   }
   requestRedraw();
 }

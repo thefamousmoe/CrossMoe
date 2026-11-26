@@ -26,7 +26,7 @@ class ImageZoomActivity final : public Activity {
   void loop() override;
   void render(RenderLock&&) override;
 
-  static constexpr int MAX_ZOOM = 4;
+  static constexpr int MAX_ZOOM = 3;  // fitted, 2x, 3x
 
  private:
   // Size of the whole image at a zoom level, in screen pixels.
@@ -44,8 +44,7 @@ class ImageZoomActivity final : public Activity {
 
   std::unique_ptr<ImageBlock> image;
   int zoom = 1;
-  // Highest level offered: past the picture's own detail zooming only blurs.
-  // Lowered further if a level's SD copy cannot be built.
+  // Highest level offered; lowered if a level's SD copy cannot be built.
   int maxZoom = MAX_ZOOM;
   // Top-left of the visible window inside the zoomed image.
   int panX = 0;
