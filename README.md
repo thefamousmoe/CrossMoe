@@ -15,9 +15,10 @@ Other CrossInk devices (X4 Pro, X4 Classic, Sticky, EEGO A4, Picco) are not buil
 
 Opens the biggest picture on the current page full screen, so you can actually read fantasy maps and diagrams.
 
-- **Confirm** steps through fitted, 2x, 3x and 4x, then back to fitted.
-- **Left/Right** (front buttons) and **Up/Down** (side buttons) move around the zoomed picture.
-- **Back** returns to the book.
+- **Confirm** zooms in: fitted, 2x, then 3x.
+- **Back** zooms out one level at a time. From the fitted view it returns to the book.
+- **Left/Right** (front buttons) and **Up/Down** (side buttons) move around the zoomed picture, in portrait or landscape.
+- While zoomed in, the button hints along the bottom show what each button does: Zoom Out, Zoom In, Move Left, Move Right.
 - The first time you open a zoom level you'll see **Loading** for a few seconds while the picture is saved in gray to a temporary file on the SD card. Moving around that level is then quick. The temporary files are deleted when you leave.
 - Works with JPEG and PNG pictures, including in Adobe DRM (Libby) books.
 
@@ -28,17 +29,22 @@ Finds every place a name or phrase appears in the book, a bit like Kindle's X-Ra
 1. Start **Search Book**. The word picker opens on the current page.
 2. Pick a word, or hold **Confirm** to select a phrase.
 3. A progress bar shows while the book is searched. **Back** cancels.
-4. Choose a result to jump to the page where it appears. **Back** takes you to where you were.
+4. Choose a result. The reader opens the page that shows it, whatever your font and size settings, and draws a box around the word with a counter like `3/12`.
+5. **Left/Right** jump to the previous and next match in the book. **Back** clears the box and you keep reading from there.
 
 ### Auto-Rotate
 
-Lets EPUB and TXT books follow the way you hold the reader, using the X3's motion sensor. Turn it on in **Settings > Reader > Page Layout > Auto-Rotate**:
+Lets EPUB and TXT books follow the way you hold the reader, using the X3's motion sensor. Turn it on in **Settings > Reader > Page Layout > Auto-Rotate**, or from the Reader Menu's **Layout** tab while reading:
 
 - **Flip only**: turning the reader upside down flips the page, for example when you switch hands.
 - **Flip and sideways**: also switches between portrait and landscape. Landscape lays the chapter out again, so expect a few seconds of **Loading** the first time.
-- **Rotation Delay** (Short / Normal / Long) sets how long the reader must rest in its new position first. Normal is 1 second for a flip and 2 seconds sideways.
+- **Rotation Delay** (Short / Normal / Long) sets how long the reader must rest in its new position first.
 
-It starts working after you press any button in the book, which is how it learns which way up you're reading. It ignores the reader while it's lying flat or moving. If a sideways turn ever comes out upside down, use **Rotate Page 180°** within 20 seconds and it remembers the correction. Turn on **Orientation Aware** for the buttons in **Settings > Controls** so page turns follow the rotated screen.
+It starts working as soon as a book opens or the reader wakes up. It ignores the reader while it's lying flat or moving. If a sideways turn ever comes out upside down, use **Rotate Page 180°** within 20 seconds and it remembers the correction. Turn on **Orientation Aware** for the buttons in **Settings > Controls** so page turns follow the rotated screen.
+
+### Stay Awake When Plugged In
+
+**Settings > System > Device > Stay Awake When Plugged In** stops the reader from going to sleep on its own while it's on USB power, which is handy while copying books or flashing firmware. The **Time to Sleep** timer starts over when you unplug. The X3 can only tell it's plugged in while the battery is charging, so on a charger with a full battery it may still go to sleep.
 
 ### Adobe DRM activation fix
 
