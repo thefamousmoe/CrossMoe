@@ -12,7 +12,7 @@
 
 #include "InputWake.h"
 
-#if FREEINK_MCU_S3
+#if FREEINK_MCU_S3 || FREEINK_MCU_C3
 #include <soc/usb_serial_jtag_reg.h>
 #endif
 
@@ -371,7 +371,7 @@ bool HalGPIO::verifyPowerButtonWakeup(const bool shortPressWakes, const uint16_t
   return true;
 }
 
-#if FREEINK_MCU_S3
+#if FREEINK_MCU_S3 || FREEINK_MCU_C3
 // USB host presence via the USB-Serial-JTAG peripheral's SOF frame counter: a
 // connected host clocks 1 kHz start-of-frame packets, so the counter advancing
 // between polls means a data-capable host is attached. Held for a short window
@@ -450,6 +450,14 @@ bool HalGPIO::isUsbConnected() const {
 }
 
 bool HalGPIO::isUsbConnectedCached() const { return usbStateSampled ? lastUsbConnected : isUsbConnected(); }
+
+bool HalGPIO::isUsbHostConnected() const {
+#if FREEINK_MCU_S3 || FREEINK_MCU_C3
+  return usbHostSofActive();
+#else
+  return false;
+#endif
+}
 
 bool HalGPIO::coldBootImpliesPowerButton() const {
   // These boards use a button-energized or otherwise known latch topology, so

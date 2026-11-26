@@ -2202,15 +2202,15 @@ void loop() {
   const unsigned long sleepTimeoutMs = SETTINGS.getSleepTimeoutMs();
   // Stay Awake When Plugged In: hold off the inactivity sleep while USB power is
   // seen, and restart the full timer on unplug so it does not sleep instantly.
-  // On the X3, "plugged in" is inferred from charge current, so a full battery
-  // on a charger can read as unplugged.
+  // On the X3, "plugged in" is inferred from charge current, which stops at a
+  // full battery, so a connected computer counts too.
   static bool heldAwakeByUsb = false;
   bool holdAwakeForUsb = false;
   if (SETTINGS.stayAwakeWhenPlugged && sleepTimeoutMs > 0) {
 #ifdef SIMULATOR
     holdAwakeForUsb = gpio.isUsbConnected();
 #else
-    holdAwakeForUsb = gpio.isUsbConnectedCached();
+    holdAwakeForUsb = gpio.isUsbConnectedCached() || gpio.isUsbHostConnected();
 #endif
   }
   if (holdAwakeForUsb != heldAwakeByUsb) {
