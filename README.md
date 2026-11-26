@@ -15,7 +15,7 @@ Other CrossInk devices (X4 Pro, X4 Classic, Sticky, EEGO A4, Picco) are not buil
 
 Opens the biggest picture on the current page full screen, so you can actually read fantasy maps and diagrams.
 
-- **Confirm** zooms in: fitted, 2x, then 3x.
+- **Confirm** zooms in: fitted, 2x, 3x, then 4x.
 - **Back** zooms out one level at a time. From the fitted view it returns to the book.
 - **Left/Right** (front buttons) and **Up/Down** (side buttons) move around the zoomed picture, in portrait or landscape.
 - While zoomed in, the button hints along the bottom show what each button does: Zoom Out, Zoom In, Move Left, Move Right.
@@ -38,7 +38,8 @@ Lets EPUB and TXT books follow the way you hold the reader, using the X3's motio
 
 - **Flip only**: turning the reader upside down flips the page, for example when you switch hands.
 - **Flip and sideways**: also switches between portrait and landscape. Landscape lays the chapter out again, so expect a few seconds of **Loading** the first time.
-- **Rotation Delay** (Short / Normal / Long) sets how long the reader must rest in its new position first.
+- **Rotation Delay** (Short / Normal / Long) sets how long the reader must rest in its new position first. Short is a quarter second.
+- A **Rotating** notice shows while the page turns.
 
 It starts working as soon as a book opens or the reader wakes up. It ignores the reader while it's lying flat or moving. If a sideways turn ever comes out upside down, use **Rotate Page 180°** within 20 seconds and it remembers the correction. Turn on **Orientation Aware** for the buttons in **Settings > Controls** so page turns follow the rotated screen.
 
