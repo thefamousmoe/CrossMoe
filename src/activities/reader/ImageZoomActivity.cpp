@@ -74,10 +74,10 @@ void ImageZoomActivity::setZoom(const int newZoom) {
   // Keep the point at the centre of the screen in the centre after zooming.
   const int screenW = renderer.getScreenWidth();
   const int screenH = renderer.getScreenHeight();
-  const float centerX = (static_cast<float>(panX) + static_cast<float>(std::min(screenW, oldW)) / 2.0f) /
-                        static_cast<float>(oldW);
-  const float centerY = (static_cast<float>(panY) + static_cast<float>(std::min(screenH, oldH)) / 2.0f) /
-                        static_cast<float>(oldH);
+  const float centerX =
+      (static_cast<float>(panX) + static_cast<float>(std::min(screenW, oldW)) / 2.0f) / static_cast<float>(oldW);
+  const float centerY =
+      (static_cast<float>(panY) + static_cast<float>(std::min(screenH, oldH)) / 2.0f) / static_cast<float>(oldH);
   zoom = newZoom;
   panX = static_cast<int>(centerX * static_cast<float>(newW)) - screenW / 2;
   panY = static_cast<int>(centerY * static_cast<float>(newH)) - screenH / 2;

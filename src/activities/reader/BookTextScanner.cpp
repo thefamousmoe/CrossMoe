@@ -34,12 +34,12 @@ const char* namedEntity(const char* name) {
     const char* name;
     const char* utf8;
   } table[] = {
-      {"rsquo", "\xE2\x80\x99"}, {"lsquo", "\xE2\x80\x98"}, {"rdquo", "\xE2\x80\x9D"}, {"ldquo", "\xE2\x80\x9C"},
+      {"rsquo", "\xE2\x80\x99"}, {"lsquo", "\xE2\x80\x98"}, {"rdquo", "\xE2\x80\x9D"},  {"ldquo", "\xE2\x80\x9C"},
       {"mdash", "\xE2\x80\x94"}, {"ndash", "\xE2\x80\x93"}, {"hellip", "\xE2\x80\xA6"}, {"copy", "\xC2\xA9"},
-      {"eacute", "\xC3\xA9"},     {"egrave", "\xC3\xA8"},     {"ecirc", "\xC3\xAA"},      {"aacute", "\xC3\xA1"},
-      {"agrave", "\xC3\xA0"},     {"iacute", "\xC3\xAD"},     {"oacute", "\xC3\xB3"},     {"uacute", "\xC3\xBA"},
-      {"ntilde", "\xC3\xB1"},     {"uuml", "\xC3\xBC"},       {"ouml", "\xC3\xB6"},       {"auml", "\xC3\xA4"},
-      {"euml", "\xC3\xAB"},       {"iuml", "\xC3\xAF"},       {"ccedil", "\xC3\xA7"},     {"szlig", "\xC3\x9F"},
+      {"eacute", "\xC3\xA9"},    {"egrave", "\xC3\xA8"},    {"ecirc", "\xC3\xAA"},      {"aacute", "\xC3\xA1"},
+      {"agrave", "\xC3\xA0"},    {"iacute", "\xC3\xAD"},    {"oacute", "\xC3\xB3"},     {"uacute", "\xC3\xBA"},
+      {"ntilde", "\xC3\xB1"},    {"uuml", "\xC3\xBC"},      {"ouml", "\xC3\xB6"},       {"auml", "\xC3\xA4"},
+      {"euml", "\xC3\xAB"},      {"iuml", "\xC3\xAF"},      {"ccedil", "\xC3\xA7"},     {"szlig", "\xC3\x9F"},
   };
   for (const auto& entry : table) {
     if (isTag(name, entry.name)) return entry.utf8;

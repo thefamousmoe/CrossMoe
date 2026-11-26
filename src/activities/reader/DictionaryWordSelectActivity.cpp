@@ -1,8 +1,5 @@
 #include "DictionaryWordSelectActivity.h"
 
-#include <cctype>
-#include <cstring>
-
 #include <BidiUtils.h>
 #include <FontCacheManager.h>
 #include <GfxRenderer.h>
@@ -14,6 +11,7 @@
 #include <freertos/task.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstring>
 #include <limits>

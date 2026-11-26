@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "../Activity.h"
-#include "components/themes/BaseTheme.h"
 #include "BookTextScanner.h"
+#include "components/themes/BaseTheme.h"
 #include "util/ButtonNavigator.h"
 
 class Epub;
