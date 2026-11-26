@@ -55,7 +55,12 @@ struct PixelCache {
   PixelCache& operator=(const PixelCache&) = delete;
 
   static constexpr int MIN_BAND_ROWS = 16;
-  static constexpr size_t MAX_BAND_BYTES = 24 * 1024;  // band working-set ceiling
+  static constexpr size_t MAX_BAND_BYTES = 24 * 1024;  // preferred band working-set ceiling
+  // Wide upscales (e.g. a 3x zoomed landscape map, ~2100px wide) cannot fit
+  // even one decode block in 24KB. Allow a larger band only in that case,
+  // where the alternative is no cache at all; the malloc below still fails
+  // safely if the heap cannot provide it.
+  static constexpr size_t HARD_MAX_BAND_BYTES = 48 * 1024;
 
   // Open the cache file, write the header, and allocate a band buffer big enough
   // to hold the tallest single decode block (maxBlockDstRows output rows).
@@ -77,6 +82,13 @@ struct PixelCache {
     size_t maxRowsByMem = MAX_BAND_BYTES / (size_t)bytesPerRow;
     if (maxRowsByMem < 1) maxRowsByMem = 1;
     if ((size_t)wantRows > maxRowsByMem) wantRows = (int)maxRowsByMem;
+    if (wantRows < maxBlockDstRows) {
+      // Only as many rows as one block needs, up to the hard ceiling.
+      size_t hardRows = HARD_MAX_BAND_BYTES / (size_t)bytesPerRow;
+      wantRows = maxBlockDstRows + 2;
+      if (wantRows > h) wantRows = h;
+      if ((size_t)wantRows > hardRows) wantRows = (int)hardRows;
+    }
 
     // A single decode block must fit inside the band, otherwise streaming would
     // drop rows. This only fails for pathological upscales that could not be

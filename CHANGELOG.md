@@ -10,6 +10,7 @@
 ### Fixed
 
 - Activating Adobe DRM (ACSM) on X3/X4 no longer fails with a PKCS#12 RC2 error.
+- Zoom Image now reaches 3x on wide pictures in landscape, and both side buttons pan in opposite directions in landscape instead of the same one.
 
 ## [v2.0.0] - 2026-11-24
 

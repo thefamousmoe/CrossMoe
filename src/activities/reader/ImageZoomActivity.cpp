@@ -177,14 +177,28 @@ void ImageZoomActivity::loop() {
 
   int dx = 0;
   int dy = 0;
-  if (mappedInput.wasReleased(MappedInputManager::Button::Left)) dx = -stepX;
-  if (mappedInput.wasReleased(MappedInputManager::Button::Right)) dx = stepX;
-  if (mappedInput.wasReleased(MappedInputManager::Button::Up) ||
-      mappedInput.wasReleased(MappedInputManager::Button::PageBack))
+  if (mappedInput.wasReleased(MappedInputManager::Button::Left)) {
+    dx = -stepX;
+  } else if (mappedInput.wasReleased(MappedInputManager::Button::Right)) {
+    dx = stepX;
+  }
+  // One side-button press reports as both a direction (Up/Down) and a page turn
+  // (PageBack/PageForward). In landscape those two mappings point opposite ways,
+  // so read the direction first and use the page-turn mapping only as a fallback.
+  if (mappedInput.wasReleased(MappedInputManager::Button::Up)) {
     dy = -stepY;
-  if (mappedInput.wasReleased(MappedInputManager::Button::Down) ||
-      mappedInput.wasReleased(MappedInputManager::Button::PageForward))
+  } else if (mappedInput.wasReleased(MappedInputManager::Button::Down)) {
     dy = stepY;
+  } else if (dx == 0) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::PageBack)) {
+      dy = -stepY;
+    } else if (mappedInput.wasReleased(MappedInputManager::Button::PageForward)) {
+      dy = stepY;
+    }
+  }
+  if (dx != 0 || dy != 0) {
+    LOG_INF("ZOOM", "Pan %d,%d at %dx", dx, dy, zoom);
+  }
   if (dx != 0 || dy != 0) {
     RenderLock lock(*this);
     pan(dx, dy);
