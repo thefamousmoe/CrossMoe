@@ -20,6 +20,7 @@
 #include "BookLoadingFeedback.h"
 #include "BookPageEstimate.h"
 #include "BookReadingStats.h"
+#include "BookSearchSelection.h"
 #include "BookmarkStore.h"
 #include "DailyReadingStats.h"
 #include "DeferredGrayscale.h"
@@ -283,6 +284,14 @@ class EpubReaderActivity final : public Activity {
   uint16_t pendingParagraphIndex = UINT16_MAX;
   // Search Book text for the pending paragraph jump, to land on the page showing it.
   std::string pendingSearchText;
+  // Search highlight mode: after a Search Book jump the match is boxed on the
+  // page, Left/Right step through matches and Back leaves the mode. The match
+  // list is ~8 bytes per match (at most 200) and is freed when the mode ends.
+  BookSearchSelection searchSelection;
+  std::vector<std::string> searchTokens;
+  std::string searchText;
+  bool searchHighlightActive = false;
+  unsigned long searchJumpMs = 0;
   ReaderDrawerState touchReaderDrawerState{};
 #if CROSSINK_APP_CAP_TOUCH
   std::unique_ptr<TouchReaderPreviewModel> touchReaderPreviewModel;
@@ -554,7 +563,11 @@ class EpubReaderActivity final : public Activity {
                       bool autoLookupInitialWord = false, bool searchMode = false);
   // Search the whole book for text picked on the page, then jump to a match.
   void openBookSearch(const std::string& text);
-  void jumpToSearchResult(const BookmarkResult& match, const std::string& searchText);
+  void jumpToSearchResult(const BookmarkResult& match, const std::string& text);
+  void jumpToSearchHit(int index);
+  bool handleSearchModeInput(bool backReleased);
+  void endSearchMode();
+  void drawSearchHighlights(const Page& page, int fontId, int orientedMarginTop, int orientedMarginLeft) const;
   std::unique_ptr<Page> reloadDictionaryLookupPage(int pageOffset = 0);
   static std::unique_ptr<Page> reloadDictionaryLookupPageCallback(void* context, int pageOffset);
   void onReaderMenuConfirm(EpubReaderMenuAction action, bool returnToReaderMenu = false,

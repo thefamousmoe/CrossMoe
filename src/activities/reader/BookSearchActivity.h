@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "../Activity.h"
+#include "BookSearchSelection.h"
 #include "BookTextScanner.h"
 #include "components/themes/BaseTheme.h"
 #include "util/ButtonNavigator.h"
@@ -17,11 +18,12 @@
 class Epub;
 
 // Searches every chapter for one word, showing a progress bar, then lists the
-// matches. Choosing one returns a BookmarkResult the reader jumps to.
+// matches. Choosing one returns a BookmarkResult the reader jumps to, and
+// fills `selectionOut` (if given) with all matches for previous/next stepping.
 class BookSearchActivity final : public Activity {
  public:
   BookSearchActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::shared_ptr<Epub> epub,
-                     std::string query);
+                     std::string query, BookSearchSelection* selectionOut = nullptr);
 
   void onEnter() override;
   void onExit() override;
@@ -48,6 +50,7 @@ class BookSearchActivity final : public Activity {
 
   std::shared_ptr<Epub> epub;
   std::string query;
+  BookSearchSelection* selectionOut = nullptr;  // owned by the reader, outlives this activity
   BookTextScanner scanner;
   std::atomic<State> state{State::Searching};
   int nextSpine = 0;

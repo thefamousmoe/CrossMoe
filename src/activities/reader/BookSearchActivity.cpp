@@ -30,10 +30,11 @@ constexpr fui::ActionId ACTION_ROW = 1;
 // ---------------------------------------------------------------------------
 
 BookSearchActivity::BookSearchActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                       std::shared_ptr<Epub> epub, std::string query)
+                                       std::shared_ptr<Epub> epub, std::string query, BookSearchSelection* selectionOut)
     : Activity("BookSearch", renderer, mappedInput),
       epub(std::move(epub)),
       query(std::move(query)),
+      selectionOut(selectionOut),
       uiTarget(makeUiTarget(renderer)),
       app(uiTarget, uiTarget.deviceContext()) {}
 
@@ -142,6 +143,14 @@ void BookSearchActivity::finishSearch() {
 void BookSearchActivity::selectResult() {
   if (selectedIndex < 0 || selectedIndex >= static_cast<int>(scanner.hits.size())) return;
   const auto& hit = scanner.hits[static_cast<size_t>(selectedIndex)];
+  if (selectionOut) {
+    // At most MAX_HITS (200) entries of 8 bytes, so ~1.6 KB for previous/next stepping.
+    selectionOut->hits.clear();
+    selectionOut->hits.reserve(scanner.hits.size());
+    for (const auto& h : scanner.hits)
+      selectionOut->hits.push_back({h.spineIndex, h.paragraphIndex, h.chapterProgress});
+    selectionOut->selected = selectedIndex;
+  }
   setResult(BookmarkResult{hit.spineIndex, hit.chapterProgress, hit.paragraphIndex});
   finish();
 }

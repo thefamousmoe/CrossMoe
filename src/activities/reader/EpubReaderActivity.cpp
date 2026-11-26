@@ -918,40 +918,89 @@ bool searchWordMatches(const std::string& pageWord, const std::string& token) {
   return pageWord.size() == token.size() || pageWord[token.size()] == '\'' || pageWord[token.size()] == '-';
 }
 
-// True when the page shows every word of `text`, in order and next to each other.
+// Splits search text into normalized words.
+void searchTokensFor(const std::string& text, std::vector<std::string>& tokens) {
+  tokens.clear();
+  std::string token;
+  size_t pos = 0;
+  while (pos < text.size()) {
+    const size_t space = text.find(' ', pos);
+    const size_t end = space == std::string::npos ? text.size() : space;
+    normalizeSearchWord(text.substr(pos, end - pos).c_str(), token);
+    if (!token.empty()) tokens.push_back(token);
+    pos = end + 1;
+  }
+}
+
+// A page's visible words, normalized like search tokens. A word split across
+// lines by an inserted hyphen becomes one entry covering both page words.
+struct SearchPageWords {
+  std::vector<std::string> words;
+  std::vector<uint16_t> firstPageWord;  // page word index where each entry starts
+  std::vector<uint16_t> lastPageWord;   // ... and ends
+};
+
+void collectSearchPageWords(const Page& page, SearchPageWords& out) {
+  out.words.clear();
+  out.firstPageWord.clear();
+  out.lastPageWord.clear();
+  out.words.reserve(320);
+  out.firstPageWord.reserve(320);
+  out.lastPageWord.reserve(320);
+  std::string pending;  // first half of a word split by an inserted hyphen
+  uint16_t pendingFirst = 0;
+  bool hasPending = false;
+  std::string normalized;
+  const auto add = [&](const std::string& word, const uint16_t first, const uint16_t last) {
+    normalizeSearchWord(word.c_str(), normalized);
+    if (normalized.empty()) return;
+    out.words.push_back(normalized);
+    out.firstPageWord.push_back(first);
+    out.lastPageWord.push_back(last);
+  };
+  forEachVisiblePageWord(
+      page, [&](const uint16_t pageWordIndex, const PageTextLine&, const TextBlock& block, const size_t i) {
+        const char* word = block.wordText(static_cast<uint16_t>(i));
+        std::string joined = (hasPending ? pending : std::string()) + (word + (hasEmSpacePrefix(word) ? 3 : 0));
+        const uint16_t first = hasPending ? pendingFirst : pageWordIndex;
+        hasPending = false;
+        if (block.wordEndsWithInsertedHyphen(static_cast<uint16_t>(i)) && !joined.empty() && joined.back() == '-') {
+          joined.pop_back();
+          pending = std::move(joined);
+          pendingFirst = first;
+          hasPending = true;
+          return true;
+        }
+        add(joined, first, pageWordIndex);
+        return true;
+      });
+  if (hasPending) add(pending, pendingFirst, pendingFirst);
+}
+
+// Index of the first entry of each run in `words` that matches every token in order.
+template <typename Callback>
+void forEachSearchMatch(const SearchPageWords& page, const std::vector<std::string>& tokens, Callback&& callback) {
+  if (tokens.empty()) return;
+  for (size_t start = 0; start + tokens.size() <= page.words.size(); ++start) {
+    size_t matched = 0;
+    while (matched < tokens.size() && searchWordMatches(page.words[start + matched], tokens[matched])) ++matched;
+    if (matched == tokens.size() && !callback(start)) return;
+  }
+}
+
+// True when the page shows every word of the search, in order and next to each other.
 bool pageShowsSearchText(Section& section, const uint16_t pageIndex, const std::vector<std::string>& tokens) {
   if (tokens.empty()) return false;
   auto page = section.loadPage(pageIndex);
   if (!page) return false;
-
-  std::vector<std::string> words;
-  words.reserve(320);
-  std::string pending;  // first half of a word split by an inserted hyphen
-  std::string normalized;
-  forEachVisiblePageWord(*page, [&](uint16_t, const PageTextLine&, const TextBlock& block, const size_t i) {
-    const char* word = block.wordText(static_cast<uint16_t>(i));
-    std::string joined = pending + (word + (hasEmSpacePrefix(word) ? 3 : 0));
-    pending.clear();
-    if (block.wordEndsWithInsertedHyphen(static_cast<uint16_t>(i)) && !joined.empty() && joined.back() == '-') {
-      joined.pop_back();
-      pending = std::move(joined);
-      return true;
-    }
-    normalizeSearchWord(joined.c_str(), normalized);
-    if (!normalized.empty()) words.push_back(normalized);
-    return true;
+  SearchPageWords words;
+  collectSearchPageWords(*page, words);
+  bool found = false;
+  forEachSearchMatch(words, tokens, [&](size_t) {
+    found = true;
+    return false;
   });
-  if (!pending.empty()) {
-    normalizeSearchWord(pending.c_str(), normalized);
-    if (!normalized.empty()) words.push_back(normalized);
-  }
-
-  for (size_t start = 0; start + tokens.size() <= words.size(); ++start) {
-    size_t matched = 0;
-    while (matched < tokens.size() && searchWordMatches(words[start + matched], tokens[matched])) ++matched;
-    if (matched == tokens.size()) return true;
-  }
-  return false;
+  return found;
 }
 
 // Moves a resolved search jump forward to the first page of the hit's paragraph
@@ -962,15 +1011,7 @@ uint16_t refineSearchJumpPage(Section& section, const uint16_t paragraphIndex, c
   if (text.empty() || section.pageCount == 0 || page >= section.pageCount) return page;
 
   std::vector<std::string> tokens;
-  std::string token;
-  size_t pos = 0;
-  while (pos < text.size()) {
-    const size_t space = text.find(' ', pos);
-    const size_t end = space == std::string::npos ? text.size() : space;
-    normalizeSearchWord(text.substr(pos, end - pos).c_str(), token);
-    if (!token.empty()) tokens.push_back(token);
-    pos = end + 1;
-  }
+  searchTokensFor(text, tokens);
   if (tokens.empty()) return page;
 
   // The paragraph ends on the page where the next one starts, at the latest.
@@ -2843,6 +2884,7 @@ void EpubReaderActivity::onEnter() {
 }
 
 void EpubReaderActivity::onExit() {
+  endSearchMode();
   sdFontSystem.setContentSizeScales({512, 192});
   sdFontSystem.setSettingsPersistenceCallback(nullptr, nullptr);
   // Drop the scalable-family catalog retained during reading. The active font
@@ -3903,6 +3945,11 @@ void EpubReaderActivity::loop() {
       mappedInput.suppressNextBackRelease();
       executeReaderQuickAction(action, true, QuickLockTrigger::LongBack);
     }
+    return;
+  }
+
+  // After a Search Book jump: Back clears the highlight, Left/Right step through matches.
+  if (!touch.prev && !touch.next && handleSearchModeInput(wasBackReleased())) {
     return;
   }
 
@@ -6160,7 +6207,9 @@ void EpubReaderActivity::openBookSearch(const std::string& text) {
     requestUpdate();
     return;
   }
-  auto search = makeUniqueNoThrow<BookSearchActivity>(renderer, mappedInput, epub, text);
+  searchSelection.hits.clear();
+  searchSelection.selected = -1;
+  auto search = makeUniqueNoThrow<BookSearchActivity>(renderer, mappedInput, epub, text, &searchSelection);
   if (!search) {
     LOG_ERR("ERS", "OOM: book search activity");
     drawToast(renderer, tr(STR_MEMORY_ERROR));
@@ -6181,43 +6230,158 @@ void EpubReaderActivity::openBookSearch(const std::string& text) {
   });
 }
 
-void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match, const std::string& searchText) {
+void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match, const std::string& text) {
+  searchText = text;
+  searchTokensFor(searchText, searchTokens);
+  searchHighlightActive = !searchTokens.empty();
+  const int selected = searchSelection.selected;
+  if (selected >= 0 && selected < static_cast<int>(searchSelection.hits.size())) {
+    jumpToSearchHit(selected);
+    return;
+  }
+  // No match list (should not happen): jump to the single result without stepping.
+  searchSelection.hits.clear();
+  searchSelection.hits.push_back({match.spineIndex, match.paragraphIndex, match.progress});
+  searchSelection.selected = 0;
+  jumpToSearchHit(0);
+}
+
+void EpubReaderActivity::jumpToSearchHit(const int index) {
+  if (index < 0 || index >= static_cast<int>(searchSelection.hits.size())) return;
+  searchSelection.selected = index;
+  const BookSearchHitRef hit = searchSelection.hits[static_cast<size_t>(index)];
   {
     RenderLock lock(*this);
-    // Remember where the reader was, like following a link: Back returns here.
-    int depth = footnoteDepth.load(std::memory_order_relaxed);
-    EpubLinkReturnState::push(savedPositions, depth,
-                              {currentSpineIndex, section ? section->currentPage : nextPageNumber});
-    footnoteDepth.store(depth, std::memory_order_relaxed);
+    // Page turns pressed or queued while the search screens were open must not
+    // move the reader off the match once it lands.
+    clearPendingManualPageTurns();
     clearFootnotePreviewState();
     pendingAnchor.clear();
 
-    // Same resolution as a bookmark jump: paragraph first, chapter position as fallback.
-    if (section && currentSpineIndex == match.spineIndex) {
+    // Same resolution as a bookmark jump, then on to the page that shows the text.
+    if (section && currentSpineIndex == hit.spineIndex) {
       const uint16_t fallbackPage =
-          pageFromStoredProgress(match.progress, static_cast<uint16_t>(section->estimatedTotalPages()));
-      section->currentPage = match.paragraphIndex != UINT16_MAX
-                                 ? resolveParagraphJumpPage(*section, match.paragraphIndex, fallbackPage)
+          pageFromStoredProgress(hit.chapterProgress, static_cast<uint16_t>(section->estimatedTotalPages()));
+      section->currentPage = hit.paragraphIndex != UINT16_MAX
+                                 ? resolveParagraphJumpPage(*section, hit.paragraphIndex, fallbackPage)
                                  : fallbackPage;
-      if (match.paragraphIndex != UINT16_MAX) {
-        section->currentPage = refineSearchJumpPage(*section, match.paragraphIndex,
-                                                    static_cast<uint16_t>(section->currentPage), searchText);
+      if (hit.paragraphIndex != UINT16_MAX) {
+        section->currentPage =
+            refineSearchJumpPage(*section, hit.paragraphIndex, static_cast<uint16_t>(section->currentPage), searchText);
       }
       nextPageNumber = section->currentPage;
       pendingPercentJump = false;
       pendingParagraphIndex = UINT16_MAX;
+      pendingSearchText.clear();
     } else {
-      currentSpineIndex = match.spineIndex;
-      pendingSpineProgress = match.progress;
-      pendingParagraphIndex = match.paragraphIndex;
+      currentSpineIndex = hit.spineIndex;
+      pendingSpineProgress = hit.chapterProgress;
+      pendingParagraphIndex = hit.paragraphIndex;
       pendingSearchText = searchText;
       pendingPercentJump = true;
       section.reset();
     }
   }
+  // Swallow the release of whichever button opened or stepped the search.
+  mappedInput.suppressNextFrontRelease(MappedInputManager::Button::Confirm);
+  mappedInput.suppressNextFrontRelease(MappedInputManager::Button::Left);
+  mappedInput.suppressNextFrontRelease(MappedInputManager::Button::Right);
+  searchJumpMs = millis();
+  LOG_INF("ERS", "Search match %d/%u: spine %u paragraph %u", index + 1,
+          static_cast<unsigned>(searchSelection.hits.size()), hit.spineIndex, hit.paragraphIndex);
   armReadingPaceWarmup("search_jump");
   pauseReadingPaceTimer("search_jump");
   requestUpdate();
+}
+
+void EpubReaderActivity::endSearchMode() {
+  if (!searchHighlightActive && searchSelection.hits.empty()) return;
+  searchHighlightActive = false;
+  searchTokens.clear();
+  searchText.clear();
+  // Release the match list's heap; it is rebuilt by the next search.
+  std::vector<BookSearchHitRef>().swap(searchSelection.hits);
+  searchSelection.selected = -1;
+}
+
+bool EpubReaderActivity::handleSearchModeInput(const bool backReleased) {
+  if (!searchHighlightActive) return false;
+  if (backReleased && mappedInput.getHeldTime() < ReaderUtils::GO_HOME_MS) {
+    // Back leaves the highlight and keeps reading here.
+    endSearchMode();
+    requestUpdate();
+    return true;
+  }
+  const bool previous = mappedInput.wasReleased(MappedInputManager::Button::Left);
+  const bool next = mappedInput.wasReleased(MappedInputManager::Button::Right);
+  if (!previous && !next) return false;
+  const int target = searchSelection.selected + (next ? 1 : -1);
+  if (target < 0 || target >= static_cast<int>(searchSelection.hits.size())) {
+    drawToast(renderer, tr(STR_SEARCH_NO_MORE_MATCHES));
+    delay(800);
+    requestUpdate();
+    return true;
+  }
+  jumpToSearchHit(target);
+  return true;
+}
+
+void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId, const int orientedMarginTop,
+                                              const int orientedMarginLeft) const {
+  if (!searchHighlightActive || searchTokens.empty() || renderer.getRenderMode() != GfxRenderer::BW) return;
+
+  SearchPageWords words;
+  collectSearchPageWords(page, words);
+  // Page words to box, as [first, last] page word index ranges.
+  std::array<std::pair<uint16_t, uint16_t>, 16> ranges{};
+  size_t rangeCount = 0;
+  forEachSearchMatch(words, searchTokens, [&](const size_t start) {
+    const size_t end = start + searchTokens.size() - 1;
+    ranges[rangeCount++] = {words.firstPageWord[start], words.lastPageWord[end]};
+    return rangeCount < ranges.size();
+  });
+
+  if (rangeCount > 0) {
+    forEachVisiblePageWord(page, [&](const uint16_t pageWordIndex, const PageTextLine& line, const TextBlock& block,
+                                     const size_t i) {
+      bool boxed = false;
+      for (size_t r = 0; r < rangeCount && !boxed; ++r) {
+        boxed = pageWordIndex >= ranges[r].first && pageWordIndex <= ranges[r].second;
+      }
+      if (!boxed || i >= block.wordCount()) return true;
+      const auto wordIndex = static_cast<uint16_t>(i);
+      const char* wordText = block.visibleWordText(wordIndex);
+      const int lineFontId = block.wordFontId(renderer, fontId, wordIndex);
+      const auto textStyle = static_cast<EpdFontFamily::Style>(block.wordStyle(wordIndex) & ~EpdFontFamily::UNDERLINE);
+      const int skipX =
+          hasEmSpacePrefix(wordText) ? renderer.getTextAdvanceX(lineFontId, "\xe2\x80\x83", textStyle) : 0;
+      const PageWordGeometry geometry = pageWordGeometry(renderer, fontId, line, block, wordIndex);
+      const int x = orientedMarginLeft + line.xPos + geometry.xOffset + skipX;
+      const auto band = ClippingHighlightGeometry::lineBand(
+          orientedMarginTop + line.yPos - block.getBlockStyle().ruledTextOffset,
+          SETTINGS.ruledLines && line.lineHeight ? line.lineHeight : block.maxLineHeight(renderer, fontId),
+          line.lineHeight, SETTINGS.lineHeightPercent);
+      const int w = geometry.width - skipX;
+      if (w <= 0) return true;
+      // A 2 px box, distinct from the dotted clipping marker.
+      renderer.drawRect(x - 3, band.y, w + 6, band.height, true);
+      renderer.drawRect(x - 2, band.y + 1, w + 4, band.height - 2, true);
+      return true;
+    });
+  }
+
+  // Match counter in the top-right corner, e.g. "3/17".
+  char counter[16];
+  snprintf(counter, sizeof(counter), "%d/%u", searchSelection.selected + 1,
+           static_cast<unsigned>(searchSelection.hits.size()));
+  const int screenW = renderer.getScreenWidth();
+  const int badgeW = renderer.getTextWidth(UI_10_FONT_ID, counter) + 12;
+  const int badgeH = renderer.getLineHeight(UI_10_FONT_ID) + 6;
+  const int badgeX = screenW - badgeW - 4;
+  const int badgeY = std::max(4, orientedMarginTop - badgeH - 2);
+  renderer.fillRect(badgeX, badgeY, badgeW, badgeH, false);
+  renderer.drawRect(badgeX, badgeY, badgeW, badgeH, true);
+  renderer.drawText(UI_10_FONT_ID, badgeX + 6, badgeY + 3, counter, true);
 }
 
 void EpubReaderActivity::openFootnoteSelect(const bool returnToReaderMenu) {
@@ -6846,6 +7010,11 @@ bool EpubReaderActivity::isAtBookStart() const {
 }
 
 void EpubReaderActivity::pageTurn(bool isForwardTurn, const char* source) {
+  if (searchJumpMs != 0 && millis() - searchJumpMs < 5000) {
+    // Diagnoses stray turns right after a search jump in the serial log.
+    LOG_INF("ERS", "Page turn %s from %s shortly after a search jump", isForwardTurn ? "forward" : "back",
+            source ? source : "?");
+  }
   // Keep the chapter alive while the render task can replace it during loading.
   RenderLock lock(*this);
   if (!activeFootnotePreview) statusBarRelayoutOffset.reset();
@@ -8384,6 +8553,7 @@ bool EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int fo
 
   const auto finalizeBufferComposition = [&]() {
     drawClippingHighlights(*page, fontId, orientedMarginTop, orientedMarginLeft);
+    drawSearchHighlights(*page, fontId, orientedMarginTop, orientedMarginLeft);
     drawPublisherPageMarkers(renderer, *page, orientedMarginTop, contentBottom, foregroundBlack);
 #if CROSSINK_APP_CAP_TOUCH
     if (activeFootnotePreview) {
