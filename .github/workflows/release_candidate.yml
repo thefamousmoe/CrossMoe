@@ -71,7 +71,8 @@ jobs:
           CROSSINK_FONT_BASE_URL: ${{ vars.CROSSINK_FONT_BASE_URL }}
           CROSSINK_RC_BRANCH: ${{ env.RC_BRANCH_RAW }}
           CROSSINK_RC_HASH: ${{ env.RC_HASH_SHORT }}
-        run: pio run -j1 -e ${{ matrix.environment }}
+        # Use every runner core; one-at-a-time compiling took ~12 minutes.
+        run: pio run -j "$(nproc)" -e ${{ matrix.environment }}
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v7
