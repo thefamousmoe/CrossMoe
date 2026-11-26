@@ -38,6 +38,12 @@ void ImageZoomActivity::onEnter() {
     LOG_INF("ZOOM", "Source %dx%d, fitted %dx%d, path %s", sourceWidth, sourceHeight, fitWidth, fitHeight,
             image->getImagePath().c_str());
   }
+  // The fitted view looks just like the picture on the page, so open at 2x.
+  // If 2x cannot be shown, render() steps back to the fitted view.
+  if (canZoom()) {
+    setZoom(2);
+    minZoom = zoom;
+  }
   requestRedraw();
 }
 
@@ -150,8 +156,8 @@ void ImageZoomActivity::loop() {
   Activity::loop();
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    // Back zooms out one level at a time; only the fitted view returns to the book.
-    if (zoom <= 1) {
+    // Back zooms out one level at a time; the level it opened at returns to the book.
+    if (zoom <= minZoom) {
       close();
       return;
     }
@@ -270,9 +276,11 @@ void ImageZoomActivity::drawChrome(const bool imageShown) {
   const bool verticalOnly = w <= screenW && h > renderer.getScreenHeight();
   const bool horizontalOnly = h <= renderer.getScreenHeight() && w > screenW;
   const char* zoomInLabel = zoom < maxZoom ? tr(STR_ZOOM_IN) : nullptr;
-  const auto labels =
-      mappedInput.mapLabels(tr(STR_ZOOM_OUT), zoomInLabel, verticalOnly ? tr(STR_MOVE_UP) : tr(STR_MOVE_LEFT),
-                            verticalOnly ? tr(STR_MOVE_DOWN) : tr(STR_MOVE_RIGHT));
+  // At the level it opened at, Back returns to the book.
+  const MappedInputManager::Label backLabel =
+      zoom > minZoom ? MappedInputManager::Label(tr(STR_ZOOM_OUT)) : mappedInput.withBackArrow(tr(STR_BACK));
+  const auto labels = mappedInput.mapLabels(backLabel, zoomInLabel, verticalOnly ? tr(STR_MOVE_UP) : tr(STR_MOVE_LEFT),
+                                            verticalOnly ? tr(STR_MOVE_DOWN) : tr(STR_MOVE_RIGHT));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   drawSideHints(horizontalOnly ? tr(STR_MOVE_LEFT) : tr(STR_MOVE_UP),
                 horizontalOnly ? tr(STR_MOVE_RIGHT) : tr(STR_MOVE_DOWN));
@@ -309,6 +317,7 @@ void ImageZoomActivity::render(RenderLock&&) {
       LOG_ERR("ZOOM", "No SD copy for %dx; staying at %dx", zoom, zoom - 1);
       maxZoom = zoom - 1;
       setZoom(zoom - 1);
+      minZoom = std::min(minZoom, zoom);
       zoomedSize(zoom, w, h);
       x = w <= screenW ? (screenW - w) / 2 : -panX;
       y = h <= screenH ? (screenH - h) / 2 : -panY;

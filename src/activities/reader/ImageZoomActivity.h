@@ -47,6 +47,9 @@ class ImageZoomActivity final : public Activity {
   int zoom = 1;
   // Highest level offered; lowered if a level's SD copy cannot be built.
   int maxZoom = MAX_ZOOM;
+  // Level the viewer opened at (2x, or fitted if 2x is not possible); Back
+  // from here returns to the book.
+  int minZoom = 1;
   // Top-left of the visible window inside the zoomed image.
   int panX = 0;
   int panY = 0;

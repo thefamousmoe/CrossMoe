@@ -212,7 +212,7 @@ image preferences are preserved.
 
 ### Zoom Image
 
-**Zoom Image** opens the largest picture on the current page full screen, so
+**Zoom Image** opens the largest picture on the current page at 2x zoom, so
 maps and diagrams can be read in detail. Open it from the Reader Menu's **More**
 tab, add it to **Quick Actions**, or assign it to a button press under
 **Settings > Controls** (power, side buttons, front long-press or long-press
@@ -220,9 +220,8 @@ Back/Menu).
 
 In the viewer:
 
-- **Confirm** zooms in: fitted, 2x, 3x, then 4x.
-- **Back** zooms out one level at a time. From the fitted view it returns to
-  the book.
+- It opens at **2x**. **Confirm** zooms in to 3x, then 4x.
+- **Back** zooms out one level at a time. From 2x it returns to the book.
 - **Left/Right** and **Up/Down** move around the zoomed picture. If the picture
   only extends in one direction, every direction button moves along it.
 
