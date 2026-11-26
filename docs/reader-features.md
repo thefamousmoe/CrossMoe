@@ -451,11 +451,13 @@ follow the way you hold the device. Turn it on in **Settings > Reader > Page
 Layout > Auto-Rotate**, or from the Reader Menu's **Layout** tab while reading:
 
 - **Off**: the page only rotates when you choose an orientation.
-- **Flip only**: turning the device upside down flips the page, for example
-  when you switch hands.
-- **Flip and sideways**: turning it sideways also switches between portrait and
-  landscape. Landscape needs the chapter to be laid out again, so expect a few
-  seconds of **Loading** the first time.
+- **Flip**: turning the device upside down flips the page, for example when you
+  switch hands.
+- **Sideways**: turning it sideways switches between portrait and landscape,
+  either way round, but portrait is never shown upside down. Landscape needs
+  the chapter to be laid out again, so expect a few seconds of **Loading** the
+  first time.
+- **Flip + Sideways**: both, including upside-down portrait.
 
 **Rotation Delay** sets how long the device must rest in its new position
 before the page turns: Short (0.25 s for both), Normal (1 s flip, 2 s sideways)
@@ -463,11 +465,6 @@ or Long (1.6 s / 3 s). It shows as Disabled while Auto-Rotate is off.
 
 When it turns the page, a **Rotating** notice shows until the page is drawn
 again in the new direction.
-
-**Upside Down** (on by default) allows the page to turn upside down when you
-hold portrait the other way up. Turn it off if you never read that way: that
-position then shows normal portrait. Flips between the two landscape directions
-still work.
 
 How it behaves:
 

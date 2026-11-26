@@ -90,13 +90,17 @@ unsigned long sidewaysHoldMs() {
   }
 }
 
-// With Upside Down off, the position that would show portrait upside down
-// shows normal portrait instead.
-uint8_t allowedOrientation(const uint8_t orientation) {
-  if (!SETTINGS.autoRotateUpsideDown && orientation == CrossPointSettings::INVERTED) {
+// Sideways never shows portrait upside down; that position shows normal
+// portrait instead.
+uint8_t allowedOrientation(const uint8_t mode, const uint8_t orientation) {
+  if (mode == CrossPointSettings::AUTO_ROTATE_SIDEWAYS && orientation == CrossPointSettings::INVERTED) {
     return CrossPointSettings::PORTRAIT;
   }
   return orientation;
+}
+
+bool allowsSideways(const uint8_t mode) {
+  return mode == CrossPointSettings::AUTO_ROTATE_ALL || mode == CrossPointSettings::AUTO_ROTATE_SIDEWAYS;
 }
 
 }  // namespace
@@ -164,9 +168,9 @@ int poll(const uint8_t currentOrientation) {
       if (state.offset == NO_OFFSET) {
         state.trustPairing = true;  // nothing learned yet: assume upright, as before
       } else {
-        const uint8_t target = allowedOrientation(orientationForZone(state.offset, openZone, state.mirrored));
+        const uint8_t target = allowedOrientation(mode, orientationForZone(state.offset, openZone, state.mirrored));
         const uint8_t steps = static_cast<uint8_t>((target + 4 - currentOrientation) % 4);
-        const bool allowed = steps == 2 || mode == CrossPointSettings::AUTO_ROTATE_ALL;
+        const bool allowed = steps == 2 || allowsSideways(mode);
         state.trustPairing = target == currentOrientation || allowed;
         if (target != currentOrientation && allowed) {
           LOG_INF("ROT", "Opened held in zone %u: %u -> %u", openZone, currentOrientation, target);
@@ -191,9 +195,9 @@ int poll(const uint8_t currentOrientation) {
   const uint8_t turns = halTiltSensor.takeAutoRotateTurns();
   if (turns == 0) return -1;
 
-  const uint8_t target = allowedOrientation(orientationAfterTurns(currentOrientation, turns, state.mirrored));
+  const uint8_t target = allowedOrientation(mode, orientationAfterTurns(currentOrientation, turns, state.mirrored));
   if (target == currentOrientation) {
-    LOG_INF("ROT", "Auto-rotate %u turn(s) skipped: Upside Down is off", turns);
+    LOG_INF("ROT", "Auto-rotate %u turn(s) kept: Sideways never shows portrait upside down", turns);
     return -1;
   }
   LOG_INF("ROT", "Auto-rotate %u -> %u (%u quarter turns)", currentOrientation, target, turns);

@@ -163,7 +163,6 @@ enum class ReaderDrawerCatalogItem : uint8_t {
   ZoomImage,
   AutoRotate,
   RotationDelay,
-  AutoRotateUpsideDown,
 };
 
 struct ReaderDrawerAvailability {
@@ -212,7 +211,6 @@ constexpr ReaderDrawerCatalog makeReaderDrawerCatalog(const ReaderDrawerAvailabi
   if (available.hasMotionSensor) {
     layout.add(ReaderDrawerCatalogItem::AutoRotate);
     layout.add(ReaderDrawerCatalogItem::RotationDelay);
-    layout.add(ReaderDrawerCatalogItem::AutoRotateUpsideDown);
   }
   layout.add(ReaderDrawerCatalogItem::Alignment);
   layout.add(ReaderDrawerCatalogItem::Images);

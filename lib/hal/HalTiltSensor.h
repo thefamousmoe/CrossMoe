@@ -56,7 +56,7 @@ class HalTiltSensor {
 
   // Auto-rotate (see setAutoRotate()). Off unless a reader enables it.
   AutoRotateDetector _autoRotate;
-  uint8_t _autoRotateMode = 0;  // 0 off, 1 upside-down flips only, 2 flips and sideways
+  uint8_t _autoRotateMode = 0;  // 0 off, 1 flips only, 2+ flips and sideways turns
   unsigned long _flipHoldMs = 1000;
   unsigned long _sidewaysHoldMs = 2000;
   uint8_t _pendingQuarterTurns = 0;                    // consumed by takeAutoRotateTurns()
@@ -84,7 +84,8 @@ class HalTiltSensor {
               const uint8_t sensitivity = TiltSensitivity::NORMAL);
 
   // Auto-rotate configuration, applied on the next update(). mode: 0 off,
-  // 1 upside-down flips only, 2 flips and sideways turns. Hold times are how
+  // 1 flips only, 2 or more also sideways turns (the reader decides which
+  // orientations to show). Hold times are how
   // long the device must rest in the new position before it counts.
   void setAutoRotate(uint8_t mode, unsigned long flipHoldMs, unsigned long sidewaysHoldMs);
 

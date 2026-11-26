@@ -95,14 +95,15 @@ void forEachBaseSetting(SettingVisitor visitor, void* context) {
                               CrossPointSettings::LANDSCAPE_CCW, CrossPointSettings::INVERTED}));
   // Listed even without a motion sensor so saved preferences survive; hidden in the UI there.
   add(SettingInfo::Enum(StrId::STR_AUTO_ROTATE, &CrossPointSettings::autoRotate,
-                        {StrId::STR_OFF, StrId::STR_AUTO_ROTATE_FLIP_ONLY, StrId::STR_AUTO_ROTATE_ALL}, "autoRotate",
-                        StrId::STR_CAT_READER));
+                        {StrId::STR_OFF, StrId::STR_AUTO_ROTATE_FLIP_ONLY, StrId::STR_AUTO_ROTATE_SIDEWAYS,
+                         StrId::STR_AUTO_ROTATE_ALL},
+                        "autoRotate", StrId::STR_CAT_READER)
+          .withEnumRawValues({CrossPointSettings::AUTO_ROTATE_OFF, CrossPointSettings::AUTO_ROTATE_FLIP_ONLY,
+                              CrossPointSettings::AUTO_ROTATE_SIDEWAYS, CrossPointSettings::AUTO_ROTATE_ALL}));
   add(SettingInfo::Enum(
       StrId::STR_ROTATION_DELAY, &CrossPointSettings::autoRotateDelay,
       {StrId::STR_ROTATION_DELAY_SHORT, StrId::STR_SENSITIVITY_NORMAL, StrId::STR_ROTATION_DELAY_LONG},
       "autoRotateDelay", StrId::STR_CAT_READER));
-  add(SettingInfo::Toggle(StrId::STR_AUTO_ROTATE_UPSIDE_DOWN, &CrossPointSettings::autoRotateUpsideDown,
-                          "autoRotateUpsideDown", StrId::STR_CAT_READER));
   add(SettingInfo::Submenu(StrId::STR_SCREEN_MARGIN, SettingAction::ScreenMargin));
   add(SettingInfo::Value(StrId::STR_TOP_BOTTOM, &CrossPointSettings::screenMarginVertical,
                          {CrossPointSettings::MIN_SCREEN_MARGIN, CrossPointSettings::MAX_SCREEN_MARGIN,

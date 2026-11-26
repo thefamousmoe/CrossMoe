@@ -122,7 +122,15 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   };
 
   // Reader auto-rotate from the motion sensor (IMU devices only).
-  enum AUTO_ROTATE : uint8_t { AUTO_ROTATE_OFF = 0, AUTO_ROTATE_FLIP_ONLY = 1, AUTO_ROTATE_ALL = 2 };
+  // Stored values stay fixed; the menus list them as Off, Flip, Sideways,
+  // Flip + Sideways. Sideways turns between portrait and either landscape but
+  // never shows portrait upside down.
+  enum AUTO_ROTATE : uint8_t {
+    AUTO_ROTATE_OFF = 0,
+    AUTO_ROTATE_FLIP_ONLY = 1,
+    AUTO_ROTATE_ALL = 2,
+    AUTO_ROTATE_SIDEWAYS = 3
+  };
   enum AUTO_ROTATE_DELAY : uint8_t {
     AUTO_ROTATE_DELAY_SHORT = 0,
     AUTO_ROTATE_DELAY_NORMAL = 1,
@@ -585,9 +593,6 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Follow the device when it is turned upside down and/or sideways in a reader.
   uint8_t autoRotate = AUTO_ROTATE_OFF;
   uint8_t autoRotateDelay = AUTO_ROTATE_DELAY_NORMAL;
-  // 0: auto-rotate never shows the page upside down (portrait turned 180°);
-  // that position shows normal portrait instead.
-  uint8_t autoRotateUpsideDown = 1;
   // Legacy layouts are retained for migration only.
   uint8_t frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
   uint8_t sideButtonLayout = PREV_NEXT;
