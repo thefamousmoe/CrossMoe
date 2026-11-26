@@ -9071,7 +9071,8 @@ void EpubReaderActivity::drawClippingHighlights(const Page& page, const int font
 }
 
 void EpubReaderActivity::renderStatusBar() const {
-  if (!statusBarVisible) {
+  // While a search match is showing, its Done/Prev/Next hints use that space.
+  if (!statusBarVisible || searchHighlightActive) {
     return;
   }
 
