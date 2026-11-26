@@ -333,6 +333,13 @@ void TxtReaderActivity::loop() {
   }
 
   if (const int autoOrientation = ReaderAutoRotate::poll(SETTINGS.orientation); autoOrientation >= 0) {
+    {
+      // Show the notice in the new orientation; applyReaderOrientation() sets it
+      // again and the page render that follows replaces the notice.
+      RenderLock lock(*this);
+      ReaderUtils::applyOrientation(renderer, static_cast<uint8_t>(autoOrientation));
+      drawToast(renderer, tr(STR_ROTATING));
+    }
     applyReaderOrientation(static_cast<uint8_t>(autoOrientation));
     return;
   }

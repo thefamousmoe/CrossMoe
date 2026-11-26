@@ -57,7 +57,7 @@ void saveMirror() {
 unsigned long flipHoldMs() {
   switch (SETTINGS.autoRotateDelay) {
     case CrossPointSettings::AUTO_ROTATE_DELAY_SHORT:
-      return 600;
+      return 250;
     case CrossPointSettings::AUTO_ROTATE_DELAY_LONG:
       return 1600;
     default:
@@ -68,7 +68,7 @@ unsigned long flipHoldMs() {
 unsigned long sidewaysHoldMs() {
   switch (SETTINGS.autoRotateDelay) {
     case CrossPointSettings::AUTO_ROTATE_DELAY_SHORT:
-      return 1200;
+      return 250;
     case CrossPointSettings::AUTO_ROTATE_DELAY_LONG:
       return 3000;
     default:

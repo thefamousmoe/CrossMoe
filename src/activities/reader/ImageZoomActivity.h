@@ -26,7 +26,7 @@ class ImageZoomActivity final : public Activity {
   void loop() override;
   void render(RenderLock&&) override;
 
-  static constexpr int MAX_ZOOM = 3;  // fitted, 2x, 3x
+  static constexpr int MAX_ZOOM = 4;  // fitted, 2x, 3x, 4x
 
  private:
   // Size of the whole image at a zoom level, in screen pixels.

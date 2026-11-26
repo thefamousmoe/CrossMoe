@@ -56,11 +56,11 @@ struct PixelCache {
 
   static constexpr int MIN_BAND_ROWS = 16;
   static constexpr size_t MAX_BAND_BYTES = 24 * 1024;  // preferred band working-set ceiling
-  // Wide upscales (e.g. a 3x zoomed landscape map, ~2100px wide) cannot fit
+  // Wide upscales (e.g. a 4x zoomed landscape map, ~2800px wide) cannot fit
   // even one decode block in 24KB. Allow a larger band only in that case,
   // where the alternative is no cache at all; the malloc below still fails
   // safely if the heap cannot provide it.
-  static constexpr size_t HARD_MAX_BAND_BYTES = 48 * 1024;
+  static constexpr size_t HARD_MAX_BAND_BYTES = 64 * 1024;
 
   // Open the cache file, write the header, and allocate a band buffer big enough
   // to hold the tallest single decode block (maxBlockDstRows output rows).

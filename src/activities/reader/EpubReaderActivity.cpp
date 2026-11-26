@@ -28,8 +28,8 @@
 
 #include <algorithm>
 #include <array>
-#include <climits>
 #include <cctype>
+#include <climits>
 #include <cstring>
 #include <iterator>
 #include <limits>
@@ -4039,6 +4039,12 @@ void EpubReaderActivity::loop() {
 
   if (const int autoOrientation = ReaderAutoRotate::poll(SETTINGS.orientation); autoOrientation >= 0) {
     applyOrientation(static_cast<uint8_t>(autoOrientation));
+    {
+      // The renderer already uses the new orientation, so the notice reads the
+      // right way up; the page render that follows replaces it.
+      RenderLock lock(*this);
+      drawToast(renderer, tr(STR_ROTATING));
+    }
     requestUpdate();
     return;
   }

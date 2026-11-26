@@ -220,14 +220,14 @@ Back/Menu).
 
 In the viewer:
 
-- **Confirm** zooms in: fitted, 2x, then 3x.
+- **Confirm** zooms in: fitted, 2x, 3x, then 4x.
 - **Back** zooms out one level at a time. From the fitted view it returns to
   the book.
 - **Left/Right** and **Up/Down** move around the zoomed picture. If the picture
   only extends in one direction, every direction button moves along it.
 
 While zoomed in, the button hints along the bottom show what each front button
-does: **Zoom Out**, **Zoom In** (hidden at 3x), and **Move Left**/**Move Right**,
+does: **Zoom Out**, **Zoom In** (hidden at 4x), and **Move Left**/**Move Right**,
 or **Move Up**/**Move Down** when the picture only scrolls up and down. The side
 buttons move up and down, following the way the reader is held.
 
@@ -455,8 +455,11 @@ Layout > Auto-Rotate**, or from the Reader Menu's **Layout** tab while reading:
   seconds of **Loading** the first time.
 
 **Rotation Delay** sets how long the device must rest in its new position
-before the page turns: Short (0.6 s flip, 1.2 s sideways), Normal (1 s / 2 s)
+before the page turns: Short (0.25 s for both), Normal (1 s flip, 2 s sideways)
 or Long (1.6 s / 3 s). It shows as Disabled while Auto-Rotate is off.
+
+When it turns the page, a **Rotating** notice shows until the page is drawn
+again in the new direction.
 
 How it behaves:
 
