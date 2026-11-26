@@ -210,6 +210,24 @@ Gray usually looks better for photos. These options are separate from
 **Text Anti-Aliasing**, which only smooths text. Existing global and per-book
 image preferences are preserved.
 
+### Zoom Image
+
+**Zoom Image** opens the largest picture on the current page full screen, so
+maps and diagrams can be read in detail. Add it to **Quick Actions**, or assign
+it to a button press under **Settings > Controls** (power, side buttons, front
+long-press or long-press Back/Menu).
+
+In the viewer:
+
+- **Confirm** zooms in: fitted, 2x, 3x, 4x, then back to fitted.
+- **Left/Right** and **Up/Down** move around the zoomed picture. If the picture
+  only extends in one direction, every direction button moves along it.
+- **Back** returns to the book.
+
+The viewer draws in black and white so each move is a single quick decode.
+JPEG and PNG pictures can be zoomed; other formats are shown fitted to the
+screen.
+
 ## Select Chapter
 
 To jump to a chapter, open the Reader Menu's **More** tab and select **Select

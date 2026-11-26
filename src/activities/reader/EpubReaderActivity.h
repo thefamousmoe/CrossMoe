@@ -531,6 +531,8 @@ class EpubReaderActivity final : public Activity {
                                 bool dictionaryLookupFramebufferContainsPage = true,
                                 QuickLockTrigger quickLockTrigger = QuickLockTrigger::LongMenu);
   void openQuickActionsPopup();
+  // Open the largest picture on the current page in the full-screen zoom viewer.
+  void openImageZoom();
   void executeFootnoteQuickAction(bool suppressInitialPowerRelease = false);
   void openFootnoteSelect(bool returnToReaderMenu);
 #if CROSSINK_APP_CAP_TOUCH

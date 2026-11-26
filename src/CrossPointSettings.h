@@ -296,6 +296,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     SELECT_CHAPTER = 38,
     ROTATE_FLIP = 39,
     TOGGLE_PAGE_TURN_GESTURES = 40,
+    // Open the current page's picture in the zoom viewer (EPUB reader only).
+    ZOOM_IMAGE = 41,
     SHORT_PWRBTN_COUNT
   };
 
@@ -437,6 +439,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     LONG_MENU_SELECT_CHAPTER = 27,
     LONG_MENU_ROTATE_FLIP = 28,
     LONG_MENU_TOGGLE_PAGE_TURN_GESTURES = 29,
+    LONG_MENU_ZOOM_IMAGE = 30,
     LONG_PRESS_MENU_ACTION_COUNT
   };
 

@@ -608,6 +608,53 @@ bool ImageBlock::render(GfxRenderer& renderer, const int x, const int y, const b
   return true;
 }
 
+bool ImageBlock::renderScaled(GfxRenderer& renderer, const int x, const int y, const int drawWidth,
+                              const int drawHeight, const bool grayscale) const {
+  if (drawWidth <= 0 || drawHeight <= 0) return false;
+
+  // Same source lookup as render(): protected and ordinary books both go
+  // through the reader's extractor, so this works for any book the reader can
+  // already show. The compressed source lives only until the decoder returns.
+  HeapByteBuffer source;
+  size_t sourceSize = 0;
+  if (!sourcePath.empty() && !Storage.exists(imagePath.c_str())) {
+    if (loadFn && ImageDecoderFactory::supportsMemorySource(imagePath))
+      source = loadFn(extractContext, sourcePath.c_str(), sourceSize);
+    if (!source && (!extractFn || !extractFn(extractContext, sourcePath.c_str(), imagePath.c_str()))) {
+      LOG_ERR("IMG", "Zoom: image extraction failed: %s", sourcePath.c_str());
+      return false;
+    }
+  }
+  if (!source && !Storage.exists(imagePath.c_str())) {
+    LOG_ERR("IMG", "Zoom: missing image: %s", imagePath.c_str());
+    return false;
+  }
+
+  ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(imagePath);
+  if (!decoder) {
+    LOG_ERR("IMG", "Zoom: no decoder for image: %s", imagePath.c_str());
+    return false;
+  }
+
+  RenderConfig config;
+  config.sourceData = source.get();
+  config.sourceSize = sourceSize;
+  config.x = x;
+  config.y = y;
+  config.maxWidth = drawWidth;
+  config.maxHeight = drawHeight;
+  config.useGrayscale = grayscale;
+  config.finalMonochrome = !grayscale;
+  config.useDithering = true;
+  config.performanceMode = false;
+  config.useExactDimensions = true;
+  // cachePath stays empty: a zoomed viewport must never replace the page cache.
+
+  const bool success = decoder->decodeToFramebuffer(imagePath, renderer, config);
+  if (!success) LOG_ERR("IMG", "Zoom: failed to decode image: %s", imagePath.c_str());
+  return success;
+}
+
 bool ImageBlock::serialize(Print& file) {
   return serialization::tryWriteString(file, imagePath) && serialization::tryWriteString(file, sourcePath) &&
          serialization::tryWritePod(file, width) && serialization::tryWritePod(file, height);

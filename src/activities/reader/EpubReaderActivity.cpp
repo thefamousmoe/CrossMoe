@@ -55,6 +55,7 @@
 #include "EpubReaderFootnoteSelectActivity.h"
 #include "EpubReaderFootnotesActivity.h"
 #include "EpubReaderPercentSelectionActivity.h"
+#include "ImageZoomActivity.h"
 #include "EpubReaderUtils.h"
 #include "GlobalActions.h"
 #include "HyphenationPackStore.h"
@@ -5652,6 +5653,9 @@ void EpubReaderActivity::executeReaderQuickAction(CrossPointSettings::LONG_PRESS
       applyOrientation(ReaderUtils::flippedOrientation(SETTINGS.orientation));
       requestUpdate();
       break;
+    case CrossPointSettings::LONG_MENU_ZOOM_IMAGE:
+      openImageZoom();
+      break;
     case CrossPointSettings::LONG_MENU_TOGGLE_PAGE_TURN_GESTURES:
       handleGlobalPowerButtonAction(CrossPointSettings::TOGGLE_PAGE_TURN_GESTURES);
       break;
@@ -5705,6 +5709,9 @@ bool EpubReaderActivity::handleShortcutAction(const uint8_t rawAction) {
       return true;
     case CrossPointSettings::SHORT_PWRBTN::ROTATE_FLIP:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ROTATE_FLIP);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SELECT_CHAPTER:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SELECT_CHAPTER);
@@ -5807,6 +5814,9 @@ bool EpubReaderActivity::handleShortcutAction(const CrossPointSettings::SHORT_PW
       return true;
     case CrossPointSettings::SHORT_PWRBTN::ROTATE_FLIP:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ROTATE_FLIP);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SELECT_CHAPTER:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SELECT_CHAPTER);
@@ -5913,6 +5923,68 @@ void EpubReaderActivity::openQuickActionsPopup() {
   }
 }
 
+void EpubReaderActivity::openImageZoom() {
+  std::unique_ptr<ImageBlock> image;
+  {
+    RenderLock lock(*this);
+    if (!section || !epub) {
+      requestUpdate();
+      return;
+    }
+    // Pick the largest picture on the page: maps share pages with small
+    // decorative images such as chapter ornaments.
+    auto page = section->loadPageFromSectionFile();
+    if (page) {
+      const ImageBlock* best = nullptr;
+      int bestArea = 0;
+      for (const auto& element : page->elements) {
+        if (!element || element->getTag() != TAG_PageImage) continue;
+        const ImageBlock& block = static_cast<const PageImage&>(*element).getImageBlock();
+        const int area = static_cast<int>(block.getWidth()) * static_cast<int>(block.getHeight());
+        if (area > bestArea) {
+          bestArea = area;
+          best = &block;
+        }
+      }
+      if (best) {
+        image = makeUniqueNoThrow<ImageBlock>(best->getImagePath(), best->getSourcePath(), best->getWidth(),
+                                              best->getHeight());
+      }
+    }
+  }
+
+  if (!image) {
+    drawToast(renderer, tr(STR_NO_IMAGE_ON_PAGE));
+    delay(1000);
+    requestUpdate();
+    return;
+  }
+
+  auto viewer = makeUniqueNoThrow<ImageZoomActivity>(renderer, mappedInput, std::move(image));
+  if (!viewer) {
+    LOG_ERR("ERS", "OOM: image zoom activity");
+    requestUpdate();
+    return;
+  }
+
+  // The button that opened the viewer may still be held. Swallow its release
+  // so it does not also zoom, pan or close the viewer. These front/side
+  // suppressions clear themselves when the button is not actually held.
+  for (const auto button : {MappedInputManager::Button::Back, MappedInputManager::Button::Confirm,
+                            MappedInputManager::Button::Left, MappedInputManager::Button::Right}) {
+    mappedInput.suppressNextFrontRelease(button);
+  }
+  mappedInput.suppressNextSideRelease(MappedInputManager::Button::Up);
+  mappedInput.suppressNextSideRelease(MappedInputManager::Button::Down);
+  if (mappedInput.isPressed(MappedInputManager::Button::Power)) suppressPowerShortcutRelease();
+
+  pauseReadingPaceTimer("image_zoom");
+  startActivityForResult(std::move(viewer), [this](const ActivityResult&) {
+    resumeReadingPaceTimer("image_zoom_return");
+    requestUpdate();
+  });
+}
+
 void EpubReaderActivity::openFootnoteSelect(const bool returnToReaderMenu) {
   if (currentPageFootnotes.empty()) return;
   if (currentPageFootnotes.size() == 1) {
@@ -6015,6 +6087,9 @@ bool EpubReaderActivity::executeShortPowerButtonAction() {
       return true;
     case CrossPointSettings::SHORT_PWRBTN::ROTATE_FLIP:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ROTATE_FLIP);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SELECT_CHAPTER:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SELECT_CHAPTER);
@@ -6131,6 +6206,9 @@ bool EpubReaderActivity::executeLongPowerButtonAction() {
   switch (SETTINGS.longPwrBtn) {
     case CrossPointSettings::SHORT_PWRBTN::ROTATE_FLIP:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ROTATE_FLIP);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SELECT_CHAPTER:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SELECT_CHAPTER);

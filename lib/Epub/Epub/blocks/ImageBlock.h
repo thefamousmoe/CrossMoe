@@ -13,6 +13,7 @@ class ImageBlock final : public Block {
   ~ImageBlock() override = default;
 
   const std::string& getImagePath() const { return imagePath; }
+  const std::string& getSourcePath() const { return sourcePath; }
   int16_t getWidth() const { return width; }
   int16_t getHeight() const { return height; }
 
@@ -36,6 +37,10 @@ class ImageBlock final : public Block {
   bool isEmpty() override { return false; }
 
   bool render(GfxRenderer& renderer, const int x, const int y, const bool foregroundBlack, bool imageGrayscale = true);
+  // Decode the original image at an arbitrary size for the zoom viewer. x/y may
+  // be negative: the decoders clip to the screen, so this draws one viewport of
+  // a larger-than-screen image. Never reads or writes the page pixel cache.
+  bool renderScaled(GfxRenderer& renderer, int x, int y, int drawWidth, int drawHeight, bool grayscale) const;
   bool serialize(Print& file);
   static std::unique_ptr<ImageBlock> deserialize(FsFile& file);
 
