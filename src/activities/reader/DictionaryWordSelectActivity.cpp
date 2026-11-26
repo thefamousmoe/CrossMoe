@@ -1,5 +1,8 @@
 #include "DictionaryWordSelectActivity.h"
 
+#include <cctype>
+#include <cstring>
+
 #include <BidiUtils.h>
 #include <FontCacheManager.h>
 #include <GfxRenderer.h>
@@ -1280,6 +1283,45 @@ bool DictionaryWordSelectActivity::beginTouchPress(const TextSelectionOverlay::L
 }
 #endif
 
+namespace {
+// Strip surrounding punctuation (quotes, commas, possessive marks) but keep
+// the word's own letters and inner punctuation, e.g. "Vin's," -> "Vin".
+std::string trimSearchText(const std::string& raw) {
+  auto isAsciiWord = [](const unsigned char c) { return std::isalnum(c) != 0; };
+  size_t begin = 0;
+  size_t end = raw.size();
+  while (begin < end && !isAsciiWord(static_cast<unsigned char>(raw[begin])) &&
+         static_cast<unsigned char>(raw[begin]) < 0x80)
+    ++begin;
+  // Skip a leading curly quote (E2 80 9C / E2 80 98).
+  while (begin + 2 < end && static_cast<unsigned char>(raw[begin]) == 0xE2 &&
+         static_cast<unsigned char>(raw[begin + 1]) == 0x80)
+    begin += 3;
+  // Drop a trailing possessive ('s or ’s) and punctuation.
+  while (end > begin) {
+    const auto last = static_cast<unsigned char>(raw[end - 1]);
+    if (last < 0x80 && !isAsciiWord(last)) {
+      --end;
+      continue;
+    }
+    if (end - begin >= 3 && last >= 0x80 && static_cast<unsigned char>(raw[end - 3]) == 0xE2) {
+      end -= 3;  // trailing curly quote
+      continue;
+    }
+    break;
+  }
+  std::string text = raw.substr(begin, end - begin);
+  for (const char* suffix : {"'s", "\xE2\x80\x99s"}) {
+    const size_t n = std::strlen(suffix);
+    if (text.size() > n + 1 && text.compare(text.size() - n, n, suffix) == 0) {
+      text.resize(text.size() - n);
+      break;
+    }
+  }
+  return text;
+}
+}  // namespace
+
 void DictionaryWordSelectActivity::loop() {
   if (ignoreInitialBackRelease_) {
     if (mappedInput.wasReleased(MappedInputManager::Button::Back) ||
@@ -1375,6 +1417,35 @@ void DictionaryWordSelectActivity::loop() {
     return;
   }
 
+  if (searchMode_) {
+    // Same gestures as lookup: Confirm searches the word; holding Confirm
+    // selects a phrase. The navigator also swallows the Confirm that opened us.
+    std::string phrase;
+    const auto action = navigator.handleMultiSelectInput(mappedInput, phrase);
+    if (action == WordSelectNavigator::MultiSelectAction::PhraseReady) {
+      const std::string text = trimSearchText(phrase);
+      if (!text.empty()) {
+        setResult(WordResult{text});
+        finish();
+        return;
+      }
+    }
+    if (action != WordSelectNavigator::MultiSelectAction::None) {
+      requestUpdate();
+      return;
+    }
+    if (navigator.isMultiSelecting()) return;
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+      const auto* selected = navigator.getSelected();
+      const std::string word = selected ? trimSearchText(navigator.getLookup(*selected)) : std::string{};
+      if (!word.empty()) {
+        setResult(WordResult{word});
+        finish();
+      }
+    }
+    return;
+  }
+
   if (controller.handleMultiSelect(navigator)) {
     if (controller.isLookingUp()) captureClippingRequest();
     return;
@@ -1459,7 +1530,7 @@ void DictionaryWordSelectActivity::render(RenderLock&&) {
         // on entry.
         navigator.renderHighlight(renderer, lineHeight, foregroundBlack);
       }
-      DictUtils::drawWordSelectButtonHints(renderer, mappedInput, navigator);
+      DictUtils::drawWordSelectButtonHints(renderer, mappedInput, navigator, searchMode_ ? tr(STR_SEARCH) : nullptr);
 #if CROSSINK_APP_CAP_TOUCH
       drawTouchSelection();
 #endif
@@ -1528,7 +1599,7 @@ void DictionaryWordSelectActivity::render(RenderLock&&) {
     navigator.renderHighlight(renderer, lineHeight, foregroundBlack);
   }
 
-  DictUtils::drawWordSelectButtonHints(renderer, mappedInput, navigator);
+  DictUtils::drawWordSelectButtonHints(renderer, mappedInput, navigator, searchMode_ ? tr(STR_SEARCH) : nullptr);
 #if CROSSINK_APP_CAP_TOUCH
   drawTouchSelection();
 #endif

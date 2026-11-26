@@ -56,6 +56,7 @@
 #include "EpubReaderFootnotesActivity.h"
 #include "EpubReaderPercentSelectionActivity.h"
 #include "ImageZoomActivity.h"
+#include "BookSearchActivity.h"
 #include "EpubReaderUtils.h"
 #include "GlobalActions.h"
 #include "HyphenationPackStore.h"
@@ -4168,7 +4169,7 @@ std::unique_ptr<Page> EpubReaderActivity::reloadDictionaryLookupPageCallback(voi
 }
 
 void EpubReaderActivity::openWordSelect(bool framebufferContainsPage, int initialTouchX, int initialTouchY,
-                                        bool autoLookupInitialWord) {
+                                        bool autoLookupInitialWord, const bool searchMode) {
   std::unique_ptr<Page> pageForLookup;
   ReaderViewportLayout layout{};
   std::string bookCachePath;
@@ -4231,7 +4232,14 @@ void EpubReaderActivity::openWordSelect(bool framebufferContainsPage, int initia
     requestUpdate();
     return;
   }
-  startActivityForResult(std::move(wordSelect), [this](const ActivityResult& result) {
+  if (searchMode) wordSelect->setSearchMode(true);
+  startActivityForResult(std::move(wordSelect), [this, searchMode](const ActivityResult& result) {
+    if (const auto* picked = std::get_if<WordResult>(&result.data); searchMode && picked && !picked->word.empty()) {
+      resumeReadingPaceTimer("search_word_picked");
+      releaseReaderSdFontCachesForLowMemory(renderer, "SRCH", "search word picked");
+      openBookSearch(picked->word);
+      return;
+    }
     if (const auto* request = std::get_if<DictionaryClippingRequest>(&result.data)) {
       resumeReadingPaceTimer("dictionary_lookup_to_clip");
       startClipSelection(request);
@@ -5656,6 +5664,16 @@ void EpubReaderActivity::executeReaderQuickAction(CrossPointSettings::LONG_PRESS
     case CrossPointSettings::LONG_MENU_ZOOM_IMAGE:
       openImageZoom();
       break;
+    case CrossPointSettings::LONG_MENU_SEARCH_BOOK:
+      if (epub) {
+        // Swallow the release of whichever button opened the picker; these
+        // clear themselves when that button is not actually held.
+        mappedInput.suppressNextFrontRelease(MappedInputManager::Button::Back);
+        mappedInput.suppressNextSideRelease(MappedInputManager::Button::Up);
+        mappedInput.suppressNextSideRelease(MappedInputManager::Button::Down);
+        openWordSelect(dictionaryLookupFramebufferContainsPage, -1, -1, false, /*searchMode=*/true);
+      }
+      break;
     case CrossPointSettings::LONG_MENU_TOGGLE_PAGE_TURN_GESTURES:
       handleGlobalPowerButtonAction(CrossPointSettings::TOGGLE_PAGE_TURN_GESTURES);
       break;
@@ -5712,6 +5730,9 @@ bool EpubReaderActivity::handleShortcutAction(const uint8_t rawAction) {
       return true;
     case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SELECT_CHAPTER:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SELECT_CHAPTER);
@@ -5818,6 +5839,9 @@ bool EpubReaderActivity::handleShortcutAction(const CrossPointSettings::SHORT_PW
     case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
       return true;
+    case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);
+      return true;
     case CrossPointSettings::SHORT_PWRBTN::SELECT_CHAPTER:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SELECT_CHAPTER);
       return true;
@@ -5901,6 +5925,12 @@ void EpubReaderActivity::openQuickActionsPopup() {
       quickActionsPopup, [this] { requestUpdate(); },
       [this](const auto action) {
         mappedInput.setReaderTouchscreenOverride(false);
+        if (action == CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK) {
+          // The popup is on screen, so the picker must redraw the page first.
+          executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK,
+                                   /*dictionaryLookupFramebufferContainsPage=*/false);
+          return;
+        }
         if (action == CrossPointSettings::SHORT_PWRBTN::LOOKUP_WORD) {
           // The popup was the most recent render, so word selection must redraw
           // the reader page instead of reusing the popup framebuffer.
@@ -5983,6 +6013,66 @@ void EpubReaderActivity::openImageZoom() {
     resumeReadingPaceTimer("image_zoom_return");
     requestUpdate();
   });
+}
+
+void EpubReaderActivity::openBookSearch(const std::string& text) {
+  if (!epub) {
+    requestUpdate();
+    return;
+  }
+  auto search = makeUniqueNoThrow<BookSearchActivity>(renderer, mappedInput, epub, text);
+  if (!search) {
+    LOG_ERR("ERS", "OOM: book search activity");
+    drawToast(renderer, tr(STR_MEMORY_ERROR));
+    delay(1000);
+    requestUpdate();
+    return;
+  }
+  pauseReadingPaceTimer("book_search");
+  startActivityForResult(std::move(search), [this](const ActivityResult& result) {
+    if (!result.isCancelled) {
+      if (const auto* match = std::get_if<BookmarkResult>(&result.data)) {
+        jumpToSearchResult(*match);
+        return;
+      }
+    }
+    resumeReadingPaceTimer("book_search_cancel");
+    requestUpdate();
+  });
+}
+
+void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match) {
+  {
+    RenderLock lock(*this);
+    // Remember where the reader was, like following a link: Back returns here.
+    int depth = footnoteDepth.load(std::memory_order_relaxed);
+    EpubLinkReturnState::push(savedPositions, depth,
+                              {currentSpineIndex, section ? section->currentPage : nextPageNumber});
+    footnoteDepth.store(depth, std::memory_order_relaxed);
+    clearFootnotePreviewState();
+    pendingAnchor.clear();
+
+    // Same resolution as a bookmark jump: paragraph first, chapter position as fallback.
+    if (section && currentSpineIndex == match.spineIndex) {
+      const uint16_t fallbackPage =
+          pageFromStoredProgress(match.progress, static_cast<uint16_t>(section->estimatedTotalPages()));
+      section->currentPage = match.paragraphIndex != UINT16_MAX
+                                 ? resolveParagraphJumpPage(*section, match.paragraphIndex, fallbackPage)
+                                 : fallbackPage;
+      nextPageNumber = section->currentPage;
+      pendingPercentJump = false;
+      pendingParagraphIndex = UINT16_MAX;
+    } else {
+      currentSpineIndex = match.spineIndex;
+      pendingSpineProgress = match.progress;
+      pendingParagraphIndex = match.paragraphIndex;
+      pendingPercentJump = true;
+      section.reset();
+    }
+  }
+  armReadingPaceWarmup("search_jump");
+  pauseReadingPaceTimer("search_jump");
+  requestUpdate();
 }
 
 void EpubReaderActivity::openFootnoteSelect(const bool returnToReaderMenu) {
@@ -6090,6 +6180,9 @@ bool EpubReaderActivity::executeShortPowerButtonAction() {
       return true;
     case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SELECT_CHAPTER:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SELECT_CHAPTER);
@@ -6209,6 +6302,9 @@ bool EpubReaderActivity::executeLongPowerButtonAction() {
       return true;
     case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SELECT_CHAPTER:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SELECT_CHAPTER);

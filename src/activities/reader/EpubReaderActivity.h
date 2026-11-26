@@ -549,7 +549,10 @@ class EpubReaderActivity final : public Activity {
   void handleClippingJump(const ClippingJumpResult& clipping);
   bool handleTouchDictionaryLookup();
   void openWordSelect(bool framebufferContainsPage, int initialTouchX = -1, int initialTouchY = -1,
-                      bool autoLookupInitialWord = false);
+                      bool autoLookupInitialWord = false, bool searchMode = false);
+  // Search the whole book for text picked on the page, then jump to a match.
+  void openBookSearch(const std::string& text);
+  void jumpToSearchResult(const BookmarkResult& match);
   std::unique_ptr<Page> reloadDictionaryLookupPage(int pageOffset = 0);
   static std::unique_ptr<Page> reloadDictionaryLookupPageCallback(void* context, int pageOffset);
   void onReaderMenuConfirm(EpubReaderMenuAction action, bool returnToReaderMenu = false,

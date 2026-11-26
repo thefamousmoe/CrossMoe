@@ -228,6 +228,26 @@ The viewer draws in black and white so each move is a single quick decode.
 JPEG and PNG pictures can be zoomed; other formats are shown fitted to the
 screen.
 
+## Search Book
+
+**Search Book** finds every place a name or phrase appears in the book, much
+like looking up a character in an X-Ray panel. Add it to **Quick Actions** or
+assign it to a button press under **Settings > Controls**.
+
+1. Trigger **Search Book**. The word picker opens on the current page.
+2. Move to a word and press **Confirm**, or hold **Confirm** to select a
+   phrase across several words, then press **Confirm** again.
+3. A progress bar fills while every chapter is searched. Hold **Back** to stop.
+4. The results list shows each match with a little of the surrounding text,
+   its chapter, and its position in the book. Choose one to jump there.
+5. Press **Back** on the page you jumped to and you return to where you were
+   reading, just like after following a footnote.
+
+Matching ignores letter case and only matches whole words, so searching
+"Vin" finds "Vin" and "Vin's" but not "Vindication". The first 200 matches are
+listed. Searching a long book can take several seconds, longer for
+library-protected books because each chapter is unlocked as it is searched.
+
 ## Select Chapter
 
 To jump to a chapter, open the Reader Menu's **More** tab and select **Select

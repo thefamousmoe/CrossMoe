@@ -75,7 +75,12 @@ class DictionaryWordSelectActivity final : public Activity {
   void loop() override;
   void render(RenderLock&&) override;
 
+  // Search Book reuses this picker: Confirm returns the selected word as a
+  // WordResult instead of opening the dictionary.
+  void setSearchMode(bool enabled) { searchMode_ = enabled; }
+
  private:
+  bool searchMode_ = false;
   std::unique_ptr<Page> page;
   int marginLeft;
   int marginTop;

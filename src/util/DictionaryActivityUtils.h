@@ -30,8 +30,9 @@ inline bool dictionaryPageButtonTriggered(MappedInputManager& input, const bool 
 }
 
 inline void drawWordSelectButtonHints(GfxRenderer& renderer, const MappedInputManager& mappedInput,
-                                      const WordSelectNavigator& navigator) {
-  const char* confirmLabel = navigator.isMultiSelecting() ? tr(STR_DONE) : tr(STR_LOOKUP_SHORT);
+                                      const WordSelectNavigator& navigator, const char* confirmOverride = nullptr) {
+  const char* confirmLabel =
+      confirmOverride ? confirmOverride : (navigator.isMultiSelecting() ? tr(STR_DONE) : tr(STR_LOOKUP_SHORT));
   const auto orientation = renderer.getOrientation();
   const bool isLandscape = orientation == GfxRenderer::Orientation::LandscapeClockwise ||
                            orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;

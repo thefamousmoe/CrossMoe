@@ -515,6 +515,8 @@ inline uint8_t shortcutRawValue(const ShortcutOptionCatalog catalog, const Cross
           return LongPress::LONG_MENU_TOGGLE_PAGE_TURN_GESTURES;
         case Action::ZOOM_IMAGE:
           return LongPress::LONG_MENU_ZOOM_IMAGE;
+        case Action::SEARCH_BOOK:
+          return LongPress::LONG_MENU_SEARCH_BOOK;
         case Action::PAGE_TURN:
         case Action::PREVIOUS_PAGE:
         case Action::NEARBY_POSITION_SYNC:

@@ -298,6 +298,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     TOGGLE_PAGE_TURN_GESTURES = 40,
     // Open the current page's picture in the zoom viewer (EPUB reader only).
     ZOOM_IMAGE = 41,
+    // Pick a word on the page and list every place it appears in the book.
+    SEARCH_BOOK = 42,
     SHORT_PWRBTN_COUNT
   };
 
@@ -440,6 +442,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     LONG_MENU_ROTATE_FLIP = 28,
     LONG_MENU_TOGGLE_PAGE_TURN_GESTURES = 29,
     LONG_MENU_ZOOM_IMAGE = 30,
+    LONG_MENU_SEARCH_BOOK = 31,
     LONG_PRESS_MENU_ACTION_COUNT
   };
 
