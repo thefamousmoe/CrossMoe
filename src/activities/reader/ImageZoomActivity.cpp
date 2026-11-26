@@ -172,8 +172,6 @@ void ImageZoomActivity::loop() {
   const int stepX = renderer.getScreenWidth() * 2 / 3;
   const int stepY = renderer.getScreenHeight() * 2 / 3;
 
-  if (zoom > 1 && handleHoldScan()) return;
-
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     if (!canZoom()) return;
     {
@@ -213,58 +211,6 @@ void ImageZoomActivity::loop() {
     RenderLock lock(*this);
     pan(dx, dy);
   }
-}
-
-bool ImageZoomActivity::handleHoldScan() {
-  using Button = MappedInputManager::Button;
-  // Held past this, a direction button scans instead of taking one step.
-  constexpr unsigned long kHoldStartMs = 450;
-  // Each step moves a quarter screen. The display takes about half a second
-  // per quick frame, so stepping faster only coalesces into bigger jumps.
-  constexpr unsigned long kStepEveryMs = 300;
-
-  if (holdScanning) {
-    const bool released = mappedInput.wasReleased(Button::Left) || mappedInput.wasReleased(Button::Right) ||
-                          mappedInput.wasReleased(Button::Up) || mappedInput.wasReleased(Button::Down) ||
-                          mappedInput.wasReleased(Button::PageBack) || mappedInput.wasReleased(Button::PageForward);
-    const bool stillHeld = mappedInput.isPressed(Button::Left) || mappedInput.isPressed(Button::Right) ||
-                           mappedInput.isPressed(Button::Up) || mappedInput.isPressed(Button::Down);
-    if (released || !stillHeld) {
-      // Let go: one clean gray view of where the scan ended. The release itself
-      // must not also take a normal step.
-      holdScanning = false;
-      quickFrame.store(false, std::memory_order_release);
-      LOG_INF("ZOOM", "Scan ended at %d,%d", panX, panY);
-      requestRedraw();
-      return true;
-    }
-  }
-
-  int dx = 0;
-  int dy = 0;
-  const int quarterX = renderer.getScreenWidth() / 4;
-  const int quarterY = renderer.getScreenHeight() / 4;
-  if (mappedInput.isPressed(Button::Left)) {
-    dx = -quarterX;
-  } else if (mappedInput.isPressed(Button::Right)) {
-    dx = quarterX;
-  } else if (mappedInput.isPressed(Button::Up)) {
-    dy = -quarterY;
-  } else if (mappedInput.isPressed(Button::Down)) {
-    dy = quarterY;
-  } else {
-    return false;
-  }
-  if (!holdScanning && mappedInput.getHeldTime() < kHoldStartMs) return false;
-
-  const unsigned long now = millis();
-  if (holdScanning && now - lastScanStepMs < kStepEveryMs) return true;
-  holdScanning = true;
-  lastScanStepMs = now;
-  quickFrame.store(true, std::memory_order_release);
-  RenderLock lock(*this);
-  pan(dx, dy);
-  return true;
 }
 
 bool ImageZoomActivity::ensureZoomCache(const int width, const int height) {
@@ -376,20 +322,6 @@ void ImageZoomActivity::render(RenderLock&&) {
       x = w <= screenW ? (screenW - w) / 2 : -panX;
       y = h <= screenH ? (screenH - h) / 2 : -panY;
       cached = ensureZoomCache(w, h);
-    }
-    if (cached && quickFrame.load(std::memory_order_acquire)) {
-      // Scanning: a quick black-and-white frame. The gray redraw on release
-      // clears any ghosting this leaves.
-      const unsigned long started = millis();
-      renderer.clearScreen();
-      if (ImageBlock::renderZoomCache(renderer, cachePaths[zoom], x, y, w, h)) {
-        drawChrome(true);
-        // Leave gray mode as the black-and-white fallback below does.
-        renderer.cleanupGrayscaleWithFrameBuffer();
-        renderer.displayBuffer(HalDisplay::FAST_REFRESH);
-        LOG_DBG("ZOOM", "%dx quick frame at %d,%d in %lu ms", zoom, panX, panY, millis() - started);
-        return;
-      }
     }
     if (cached) {
       const std::string& path = cachePaths[zoom];

@@ -32,8 +32,6 @@ class ImageZoomActivity final : public Activity {
   // Size of the whole image at a zoom level, in screen pixels.
   void zoomedSize(int zoomLevel, int& width, int& height) const;
   void drawSideHints(const char* upLabel, const char* downLabel);
-  // Pans while a direction button is held. Returns true when it handled input.
-  bool handleHoldScan();
   void setZoom(int newZoom);
   void pan(int dx, int dy);
   void clampPan();
@@ -56,11 +54,6 @@ class ImageZoomActivity final : public Activity {
   int panX = 0;
   int panY = 0;
   std::atomic<bool> needsRedraw{true};
-  // Holding a direction button scans: quick black-and-white frames while held,
-  // then one full gray redraw on release.
-  std::atomic<bool> quickFrame{false};
-  bool holdScanning = false;
-  unsigned long lastScanStepMs = 0;
 
   // Per zoom level (index = level). Written only by render(), read by onExit().
   std::string cachePaths[MAX_ZOOM + 1];

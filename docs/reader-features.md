@@ -224,8 +224,6 @@ In the viewer:
 - **Back** zooms out one level at a time. From 2x it returns to the book.
 - **Left/Right** and **Up/Down** move around the zoomed picture. If the picture
   only extends in one direction, every direction button moves along it.
-- **Hold** a direction button to scan: the picture keeps moving in quick black
-  and white steps while you hold it, then redraws in gray when you let go.
 
 While zoomed in, button hints show what each button does: **Out**, **In**
 (hidden at 4x), **Left** and **Right** on the front buttons, and **Up** and
