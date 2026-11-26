@@ -258,7 +258,10 @@ like looking up a character in an X-Ray panel. Open it from the Reader Menu's
 5. On that page the match is boxed (only that one, even if the words appear
    more than once on the page) and a counter such as **3/17** shows in the
    top-right corner. **Left** and **Right** jump to the previous and next match
-   anywhere in the book; the button hints show **Prev** and **Next**.
+   anywhere in the book; the button hints show **Prev** and **Next**. While
+   the hints show, the status bar is hidden; press **Confirm** (**Hide**) to
+   hide the hints and see the status bar, and **Confirm** again to bring them
+   back.
 6. Press **Back** (shown as **Done**) to clear the highlight and keep reading
    from there.
 

@@ -292,6 +292,8 @@ class EpubReaderActivity final : public Activity {
   std::vector<std::string> searchTokens;
   std::string searchText;
   bool searchHighlightActive = false;
+  // Confirm hides the Done/Prev/Next hints so the status bar shows again.
+  bool searchHintsHidden = false;
   unsigned long searchJumpMs = 0;
   ReaderDrawerState touchReaderDrawerState{};
 #if CROSSINK_APP_CAP_TOUCH

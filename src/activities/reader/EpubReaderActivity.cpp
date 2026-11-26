@@ -6236,6 +6236,7 @@ void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match, const s
   searchText = text;
   SearchText::tokens(searchText, searchTokens);
   searchHighlightActive = !searchTokens.empty();
+  searchHintsHidden = false;
   const int selected = searchSelection.selected;
   if (selected >= 0 && selected < static_cast<int>(searchSelection.hits.size())) {
     jumpToSearchHit(selected);
@@ -6298,6 +6299,7 @@ void EpubReaderActivity::jumpToSearchHit(const int index) {
 void EpubReaderActivity::endSearchMode() {
   if (!searchHighlightActive && searchSelection.hits.empty()) return;
   searchHighlightActive = false;
+  searchHintsHidden = false;
   searchTokens.clear();
   searchText.clear();
   // Release the match list's heap; it is rebuilt by the next search.
@@ -6310,6 +6312,13 @@ bool EpubReaderActivity::handleSearchModeInput(const bool backReleased) {
   if (backReleased && mappedInput.getHeldTime() < ReaderUtils::GO_HOME_MS) {
     // Back leaves the highlight and keeps reading here.
     endSearchMode();
+    requestUpdate();
+    return true;
+  }
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm) &&
+      mappedInput.getHeldTime() < ReaderUtils::GO_HOME_MS) {
+    // Confirm hides or shows the hints; hidden, the status bar shows instead.
+    searchHintsHidden = !searchHintsHidden;
     requestUpdate();
     return true;
   }
@@ -6405,8 +6414,10 @@ void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId
   renderer.drawText(UI_10_FONT_ID, badgeX + 6, badgeY + 3, counter, true);
 
   // What the buttons do while a match is showing (see handleSearchModeInput()).
+  // Hidden with Confirm so the status bar can show; Confirm shows them again.
+  if (searchHintsHidden) return;
   const auto labels =
-      mappedInput.mapLabels(tr(STR_DONE), nullptr, tr(STR_SEARCH_PREV_MATCH), tr(STR_SEARCH_NEXT_MATCH));
+      mappedInput.mapLabels(tr(STR_DONE), tr(STR_HIDE), tr(STR_SEARCH_PREV_MATCH), tr(STR_SEARCH_NEXT_MATCH));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
@@ -9091,8 +9102,9 @@ void EpubReaderActivity::drawClippingHighlights(const Page& page, const int font
 }
 
 void EpubReaderActivity::renderStatusBar() const {
-  // While a search match is showing, its Done/Prev/Next hints use that space.
-  if (!statusBarVisible || searchHighlightActive) {
+  // While a search match is showing, its Done/Prev/Next hints use that space
+  // unless they have been hidden with Confirm.
+  if (!statusBarVisible || (searchHighlightActive && !searchHintsHidden)) {
     return;
   }
 
