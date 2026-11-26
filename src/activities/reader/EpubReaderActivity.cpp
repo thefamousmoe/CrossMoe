@@ -871,6 +871,131 @@ uint16_t resolveParagraphJumpPage(const Section& section, const uint16_t paragra
   return clampedFallback;
 }
 
+// Search Book lands on the paragraph's first page, but in a long paragraph the
+// hit can be on a later page. These check the laid-out pages for the text.
+
+// Lower-cases ASCII, removes soft hyphens and surrounding punctuation (ASCII
+// and typographic quotes, dashes, ellipses) and folds curly apostrophes, so a
+// page word compares equal to the selected search word.
+void normalizeSearchWord(const char* word, std::string& out) {
+  out.clear();
+  for (const char* p = word; *p != '\0';) {
+    const auto c = static_cast<unsigned char>(*p);
+    if (c == 0xC2 && static_cast<unsigned char>(p[1]) == 0xAD) {  // soft hyphen
+      p += 2;
+      continue;
+    }
+    if (c == 0xE2 && static_cast<unsigned char>(p[1]) == 0x80 && p[2] != '\0') {
+      const auto third = static_cast<unsigned char>(p[2]);
+      if (third == 0x98 || third == 0x99) {  // curly single quote or apostrophe
+        out.push_back('\'');
+      } else if (third == 0x93 || third == 0x94 || third == 0x9C || third == 0x9D || third == 0xA6) {
+        out.push_back(' ');  // dash, double quote, ellipsis: treated as punctuation
+      } else {
+        out.append(p, 3);
+      }
+      p += 3;
+      continue;
+    }
+    out.push_back(c < 0x80 ? static_cast<char>(std::tolower(c)) : static_cast<char>(c));
+    ++p;
+  }
+  const auto isEdgePunct = [](const char ch) {
+    const auto u = static_cast<unsigned char>(ch);
+    return u < 0x80 && (std::ispunct(u) || std::isspace(u));
+  };
+  size_t start = 0;
+  while (start < out.size() && isEdgePunct(out[start])) ++start;
+  size_t end = out.size();
+  while (end > start && isEdgePunct(out[end - 1])) --end;
+  out = out.substr(start, end - start);
+}
+
+// A page word matches a search token when equal, or when it extends the token
+// with a possessive or compound ("Galen's", "Galen-like"), as the search does.
+bool searchWordMatches(const std::string& pageWord, const std::string& token) {
+  if (pageWord.size() < token.size() || pageWord.compare(0, token.size(), token) != 0) return false;
+  return pageWord.size() == token.size() || pageWord[token.size()] == '\'' || pageWord[token.size()] == '-';
+}
+
+// True when the page shows every word of `text`, in order and next to each other.
+bool pageShowsSearchText(Section& section, const uint16_t pageIndex, const std::vector<std::string>& tokens) {
+  if (tokens.empty()) return false;
+  auto page = section.loadPage(pageIndex);
+  if (!page) return false;
+
+  std::vector<std::string> words;
+  words.reserve(320);
+  std::string pending;  // first half of a word split by an inserted hyphen
+  std::string normalized;
+  forEachVisiblePageWord(*page, [&](uint16_t, const PageTextLine&, const TextBlock& block, const size_t i) {
+    const char* word = block.wordText(static_cast<uint16_t>(i));
+    std::string joined = pending + (word + (hasEmSpacePrefix(word) ? 3 : 0));
+    pending.clear();
+    if (block.wordEndsWithInsertedHyphen(static_cast<uint16_t>(i)) && !joined.empty() && joined.back() == '-') {
+      joined.pop_back();
+      pending = std::move(joined);
+      return true;
+    }
+    normalizeSearchWord(joined.c_str(), normalized);
+    if (!normalized.empty()) words.push_back(normalized);
+    return true;
+  });
+  if (!pending.empty()) {
+    normalizeSearchWord(pending.c_str(), normalized);
+    if (!normalized.empty()) words.push_back(normalized);
+  }
+
+  for (size_t start = 0; start + tokens.size() <= words.size(); ++start) {
+    size_t matched = 0;
+    while (matched < tokens.size() && searchWordMatches(words[start + matched], tokens[matched])) ++matched;
+    if (matched == tokens.size()) return true;
+  }
+  return false;
+}
+
+// Moves a resolved search jump forward to the first page of the hit's paragraph
+// that shows the search text. Keeps `page` when none does (for example when
+// the hit's words are split across a page break).
+uint16_t refineSearchJumpPage(Section& section, const uint16_t paragraphIndex, const uint16_t page,
+                              const std::string& text) {
+  if (text.empty() || section.pageCount == 0 || page >= section.pageCount) return page;
+
+  std::vector<std::string> tokens;
+  std::string token;
+  size_t pos = 0;
+  while (pos < text.size()) {
+    const size_t space = text.find(' ', pos);
+    const size_t end = space == std::string::npos ? text.size() : space;
+    normalizeSearchWord(text.substr(pos, end - pos).c_str(), token);
+    if (!token.empty()) tokens.push_back(token);
+    pos = end + 1;
+  }
+  if (tokens.empty()) return page;
+
+  // The paragraph ends on the page where the next one starts, at the latest.
+  constexpr uint16_t MAX_PAGES_CHECKED = 6;
+  uint16_t lastPage = static_cast<uint16_t>(std::min<int>(page + MAX_PAGES_CHECKED - 1, section.pageCount - 1));
+  if (paragraphIndex < UINT16_MAX - 1) {
+    const auto nextParagraphPage = section.getPageForParagraphIndex(static_cast<uint16_t>(paragraphIndex + 1));
+    if (nextParagraphPage.has_value() && *nextParagraphPage >= page && *nextParagraphPage < lastPage) {
+      lastPage = *nextParagraphPage;
+    }
+  }
+
+  const int savedPage = section.currentPage;
+  uint16_t found = page;
+  for (uint16_t candidate = page; candidate <= lastPage; ++candidate) {
+    if (pageShowsSearchText(section, candidate, tokens)) {
+      found = candidate;
+      break;
+    }
+  }
+  section.currentPage = savedPage;
+  if (found != page) LOG_DBG("ERS", "Search jump moved from page %u to %u", page, found);
+  return found;
+}
+
 uint8_t tableColumnForSelection(const uint16_t tableSelection) {
   return tableSelection == UINT16_MAX ? UINT8_MAX
                                       : static_cast<uint8_t>(tableSelection % TableFragmentRow::MAX_SERIALIZED_CELLS);
@@ -6044,10 +6169,10 @@ void EpubReaderActivity::openBookSearch(const std::string& text) {
     return;
   }
   pauseReadingPaceTimer("book_search");
-  startActivityForResult(std::move(search), [this](const ActivityResult& result) {
+  startActivityForResult(std::move(search), [this, text](const ActivityResult& result) {
     if (!result.isCancelled) {
       if (const auto* match = std::get_if<BookmarkResult>(&result.data)) {
-        jumpToSearchResult(*match);
+        jumpToSearchResult(*match, text);
         return;
       }
     }
@@ -6056,7 +6181,7 @@ void EpubReaderActivity::openBookSearch(const std::string& text) {
   });
 }
 
-void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match) {
+void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match, const std::string& searchText) {
   {
     RenderLock lock(*this);
     // Remember where the reader was, like following a link: Back returns here.
@@ -6074,6 +6199,10 @@ void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match) {
       section->currentPage = match.paragraphIndex != UINT16_MAX
                                  ? resolveParagraphJumpPage(*section, match.paragraphIndex, fallbackPage)
                                  : fallbackPage;
+      if (match.paragraphIndex != UINT16_MAX) {
+        section->currentPage = refineSearchJumpPage(*section, match.paragraphIndex,
+                                                    static_cast<uint16_t>(section->currentPage), searchText);
+      }
       nextPageNumber = section->currentPage;
       pendingPercentJump = false;
       pendingParagraphIndex = UINT16_MAX;
@@ -6081,6 +6210,7 @@ void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match) {
       currentSpineIndex = match.spineIndex;
       pendingSpineProgress = match.progress;
       pendingParagraphIndex = match.paragraphIndex;
+      pendingSearchText = searchText;
       pendingPercentJump = true;
       section.reset();
     }
@@ -7372,10 +7502,13 @@ void EpubReaderActivity::render(RenderLock&& lock) {
       } else if (pendingParagraphIndex != UINT16_MAX) {
         const uint16_t fallbackPage = static_cast<uint16_t>(std::max(0, section->currentPage));
         section->currentPage = resolveParagraphJumpPage(*section, pendingParagraphIndex, fallbackPage);
+        section->currentPage = refineSearchJumpPage(*section, pendingParagraphIndex,
+                                                    static_cast<uint16_t>(section->currentPage), pendingSearchText);
         LOG_DBG("ERS", "Resolved paragraph %u to page %d", pendingParagraphIndex, section->currentPage);
       }
       pendingClippingIndex = UINT16_MAX;
       pendingParagraphIndex = UINT16_MAX;
+      pendingSearchText.clear();
       pendingPageJump.reset();
     } else {
       section->currentPage = nextPageNumber;
@@ -7421,10 +7554,13 @@ void EpubReaderActivity::render(RenderLock&& lock) {
       } else if (pendingParagraphIndex != UINT16_MAX) {
         const uint16_t fallbackPage = static_cast<uint16_t>(std::max(0, section->currentPage));
         section->currentPage = resolveParagraphJumpPage(*section, pendingParagraphIndex, fallbackPage);
+        section->currentPage = refineSearchJumpPage(*section, pendingParagraphIndex,
+                                                    static_cast<uint16_t>(section->currentPage), pendingSearchText);
         LOG_DBG("ERS", "Resolved paragraph %u to page %d", pendingParagraphIndex, section->currentPage);
       }
       pendingClippingIndex = UINT16_MAX;
       pendingParagraphIndex = UINT16_MAX;
+      pendingSearchText.clear();
       pendingPercentJump = false;
       pendingReferenceUnitOffset.reset();
       pendingReferenceUnitCount = 0;
