@@ -286,11 +286,10 @@ open the list directly. See [Controls](./controls.md).
 ## Back After A Jump
 
 In EPUB books, after jumping somewhere with **Select Chapter**, a bookmark, or
-**Go to %**, a small **« Back to where you were** note shows in the bottom
-corner. Press **Back** on that page to return to the page you jumped from, for
-example after checking a map or a list of characters. Turn the page instead and
-the reader takes it that you are reading on from there: the note goes away and
-Back works as usual again. Jumping again from the page you landed on still
+**Go to %**, press **Back** on the page you landed on to return to the page you
+jumped from, for example after checking a map or a list of characters, instead
+of leaving the book. Turn the page forward or back instead and the reader takes
+it that you are reading on from there: Back works as usual again. Jumping again from the page you landed on still
 returns to where you first started.
 
 ## Guide Dots
