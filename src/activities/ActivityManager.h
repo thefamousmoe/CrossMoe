@@ -26,6 +26,12 @@ struct portMUX_TYPE {};
 
 enum class StrId : uint16_t;
 
+struct SleepSyncBook {
+  std::string path;
+  bool progressSafe = false;
+  bool pluginJoinAttempted = false;
+};
+
 class Activity;    // forward declaration
 class RenderLock;  // forward declaration
 
@@ -84,7 +90,7 @@ class ActivityManager {
   void exitActivity(const RenderLock& lock);
   // Apply navigation and render requests without polling the outgoing activity.
   void processPendingActivities();
-  bool prepareSleepPlugins(bool quickResume, bool fromReaderOrHome);
+  bool prepareSleepPlugins(bool quickResume, bool fromReaderOrHome, bool& attemptedJoin);
 
   // Pending activity to be launched on next loop iteration
   std::unique_ptr<Activity> pendingActivity;
@@ -181,7 +187,7 @@ class ActivityManager {
                   bool cleanImageBaseOnEntry = false, bool keepWakeFrame = false);
   void goToReaderAndRunMenuAction(std::string path, uint8_t action);
   // Returns true only when sleep rendered a known complete B/W frame.
-  bool goToSleep(bool fromTimeout = false);
+  bool goToSleep(bool fromTimeout = false, SleepSyncBook* syncBook = nullptr);
   void goToBoot();
   void goToFullScreenMessage(StrId title, StrId message);
   void goToCrashReport();
