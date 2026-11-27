@@ -28,7 +28,8 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate(ProgressCallback, void*, s
 
 namespace {
 #ifndef CROSSINK_OTA_RELEASE_URL
-#define CROSSINK_OTA_RELEASE_URL "https://api.github.com/repos/uxjulia/CrossInk/releases/latest"
+// CrossMoe updates come from its own releases, not stock CrossInk's.
+#define CROSSINK_OTA_RELEASE_URL "https://api.github.com/repos/thefamousmoe/CrossMoe/releases/latest"
 #endif
 
 constexpr char latestReleaseUrl[] = CROSSINK_OTA_RELEASE_URL;

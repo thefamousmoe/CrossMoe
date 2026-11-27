@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+### Changed
+
+- The About line in Settings reads "CrossMoe" with CrossMoe's own version number (1.0.1).
+- Check for Update now looks at CrossMoe's GitHub releases instead of stock CrossInk's, so updating no longer replaces CrossMoe with CrossInk.
+
 ### Added
 
 - Zoom Image opens the largest picture on the page at 2x. Confirm zooms in to 3x and 4x, Back zooms out (from 2x it returns to the book), and the direction buttons pan. Each zoom level is drawn in gray from a temporary SD card copy, so moving around is quick. Open it from the Reader Menu's More tab, Quick Actions, or a button shortcut.
