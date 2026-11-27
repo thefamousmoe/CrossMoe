@@ -348,6 +348,9 @@ You can:
 - Jump back to saved locations
 - Delete individual bookmarks
 
+To open the bookmark list in one press, add **View Bookmarks** to Quick Actions
+or set it on a button in **Settings > Controls**.
+
 ## Clippings And Highlights
 
 CrossInk supports EPUB text clippings from the reader. Use **Create Clipping**

@@ -524,6 +524,8 @@ inline uint8_t shortcutRawValue(const ShortcutOptionCatalog catalog, const Cross
           return LongPress::LONG_MENU_SEARCH_BOOK;
         case Action::TOGGLE_AUTO_ROTATE:
           return LongPress::LONG_MENU_TOGGLE_AUTO_ROTATE;
+        case Action::VIEW_BOOKMARKS:
+          return LongPress::LONG_MENU_VIEW_BOOKMARKS;
         case Action::PAGE_TURN:
         case Action::PREVIOUS_PAGE:
         case Action::NEARBY_POSITION_SYNC:
