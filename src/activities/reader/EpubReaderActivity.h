@@ -306,12 +306,9 @@ class EpubReaderActivity final : public Activity {
   // Where the reader was when the search started. Back from a match reopens
   // the results list; Back from that list returns here.
   ReadingSpot searchOrigin;
-  // Where the reader was before a Bookmarks, Chapters or Go to % jump. While
-  // the page jumped to is still showing, Back returns here; turning the page
-  // forgets it (see trackJumpLanding()).
+  // Where the reader was before a Bookmarks, Chapters or Go to % jump. Until
+  // the next page turn (see pageTurn()), Back returns here.
   ReadingSpot jumpReturn;
-  int jumpLandingSpine = -1;  // page jumped to, once drawn; -1 until then
-  int jumpLandingPage = -1;
   bool deferredJumpReturn = false;  // Back pressed while the page was still being built
   unsigned long searchJumpMs = 0;
   ReaderDrawerState touchReaderDrawerState{};
@@ -597,7 +594,6 @@ class EpubReaderActivity final : public Activity {
   void returnToReadingSpot(const ReadingSpot& spot);
   void armJumpReturn();
   void returnFromJump();
-  void trackJumpLanding();
   bool jumpReturnShowing() const;
   void jumpToSearchResult(const BookmarkResult& match, const std::string& text);
   void jumpToSearchHit(int index);

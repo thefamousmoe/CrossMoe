@@ -3988,8 +3988,8 @@ void EpubReaderActivity::loop() {
   // Short press BACK goes directly to home (or restores position if viewing footnote)
   if (!touch.prev && !touch.next && wasBackReleased() && mappedInput.getHeldTime() < ReaderUtils::GO_HOME_MS) {
     // Still on (or still opening) the page a Bookmarks/Chapters/Go to % jump
-    // landed on: go back. Turning the page there clears jumpReturn.
-    if (jumpReturn.valid && !searchHighlightActive && !activeFootnotePreview) {
+    // landed on: go back. Turning the page there clears jumpReturn (pageTurn()).
+    if (jumpReturnShowing()) {
       returnFromJump();
       return;
     }
@@ -6399,32 +6399,14 @@ void EpubReaderActivity::armJumpReturn() {
   // kept: a second jump from the landing page still returns to the first spot.
   if (jumpReturnShowing()) return;
   captureReadingSpot(jumpReturn);
-  jumpLandingSpine = -1;
-  jumpLandingPage = -1;
   deferredJumpReturn = false;
   if (jumpReturn.valid) {
     LOG_INF("ERS", "Jump: Back returns to spine %d page %d", jumpReturn.spineIndex, jumpReturn.page);
   }
 }
 
-void EpubReaderActivity::trackJumpLanding() {
-  // Runs as each page is drawn. The first page drawn after a jump is where it
-  // landed; any other page means the reader has moved on, so Back goes back to
-  // its usual job.
-  if (!jumpReturn.valid || !section || activeFootnotePreview) return;
-  if (jumpLandingSpine < 0) {
-    jumpLandingSpine = currentSpineIndex;
-    jumpLandingPage = section->currentPage;
-    return;
-  }
-  if (currentSpineIndex != jumpLandingSpine || section->currentPage != jumpLandingPage) {
-    jumpReturn.valid = false;
-    LOG_INF("ERS", "Jump: kept reading here; Back no longer returns");
-  }
-}
-
 bool EpubReaderActivity::jumpReturnShowing() const {
-  return jumpReturn.valid && jumpLandingSpine >= 0 && !searchHighlightActive && !activeFootnotePreview;
+  return jumpReturn.valid && !searchHighlightActive && !activeFootnotePreview;
 }
 
 void EpubReaderActivity::returnFromJump() {
@@ -7358,6 +7340,14 @@ void EpubReaderActivity::pageTurn(bool isForwardTurn, const char* source) {
     // Diagnoses stray turns right after a search jump in the serial log.
     LOG_INF("ERS", "Page turn %s from %s shortly after a search jump", isForwardTurn ? "forward" : "back",
             source ? source : "?");
+  }
+  // Turning the page after a Bookmarks/Chapters/Go to % jump means reading on
+  // from there: Back goes back to its usual job. Only a real turn counts, not
+  // the jump's page settling while its chapter is laid out.
+  if (jumpReturn.valid && !activeFootnotePreview) {
+    jumpReturn.valid = false;
+    deferredJumpReturn = false;
+    LOG_INF("ERS", "Jump: page turned (%s); Back no longer returns", source ? source : "?");
   }
   // Keep the chapter alive while the render task can replace it during loading.
   RenderLock lock(*this);
@@ -8782,7 +8772,6 @@ void EpubReaderActivity::prepareCurrentSectionForRelayout(const bool preserveSta
 bool EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int fontId, const int layoutMarginTop,
                                         const int orientedMarginRight, const int orientedMarginBottom,
                                         const int orientedMarginLeft, const bool updatePanel) {
-  trackJumpLanding();
   // While searching in portrait, only lines that fit between the status bar
   // (moved to the top) and the button hints are drawn (not laid out again).
   const int orientedMarginTop = page ? fitSearchPageWindow(*page, fontId, layoutMarginTop) : layoutMarginTop;
