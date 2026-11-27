@@ -34,7 +34,7 @@ Finds every place a name or phrase appears in the book, a bit like Kindle's X-Ra
 
 ### Auto-Rotate
 
-Lets EPUB and TXT books follow the way you hold the reader, using the X3's motion sensor. Turn it on in **Settings > Reader > Page Layout > Auto-Rotate**, or from the Reader Menu's **Layout** tab while reading:
+Lets EPUB and TXT books follow the way you hold the reader, using the X3's motion sensor. Turn it on in **Settings > Reader > Page Layout > Auto-Rotate**, or while reading: press Confirm, then the layout tab (the lines-of-text icon, second from the left):
 
 - **Flip**: turning the reader upside down flips the page, for example when you switch hands.
 - **Sideways**: switches between portrait and landscape (either way round), but never shows portrait upside down. Landscape lays the chapter out again, so expect a few seconds of **Loading** the first time.
@@ -50,7 +50,7 @@ It starts working as soon as a book opens or the reader wakes up. It ignores the
 
 ### Where to find the new features
 
-Zoom Image and Search Book are on the **More** tab of the Reader Menu, next to Look Up Word. You can also add them to **Quick Actions** or assign them to a button under **Settings > Controls** (power button, side buttons, front long-press, or long-press Back/Menu).
+In a book, press Confirm to open the reader menu. Its tabs are icons; Zoom Image and Search Book are on the **⋯ (three dots)** tab, next to Look Up Word. You can also add them to **Settings > Controls > Quick Actions**, or assign them to a button under **Settings > Controls > Power Button**, **Front Buttons**, or **Side Buttons**.
 
 See [Reader Features](./docs/reader-features.md) for the full details.
 
