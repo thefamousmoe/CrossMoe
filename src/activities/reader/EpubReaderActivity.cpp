@@ -3051,6 +3051,10 @@ void EpubReaderActivity::openReaderMenu() {
     LOG_DBG("ERDM", "Button drawer returned: free=%u maxAlloc=%u", heapAfterMenu.freeHeap, heapAfterMenu.maxAllocHeap);
 #endif
     if (const auto* chapter = std::get_if<ChapterResult>(&result.data)) {
+      {
+        RenderLock lock(*this);
+        armJumpReturn();
+      }
       touchReaderDrawerState = chapter->drawerState;
       applyOrientation(chapter->orientation);
       if (chapter->settingsChanged) {
@@ -3105,6 +3109,10 @@ void EpubReaderActivity::openReaderMenu() {
     if (!result.isCancelled) {
       if (menu->action == static_cast<int>(EpubReaderMenuAction::GO_TO_PERCENT) && menu->drawerValue >= 0) {
         // The touch drawer's Percent pane reports centipercent (see EpubReaderDrawerActivity::percent).
+        {
+          RenderLock lock(*this);
+          armJumpReturn();
+        }
         jumpToPercent(static_cast<float>(menu->drawerValue) / 100.0f);
         return;
       }
@@ -3605,6 +3613,16 @@ void EpubReaderActivity::loop() {
     return;
   }
 
+  if (deferredJumpReturn && !RenderLock::peek()) {
+    if (mappedInput.isPressed(MappedInputManager::Button::Back) &&
+        mappedInput.getHeldTime() >= ReaderUtils::GO_HOME_MS) {
+      deferredJumpReturn = false;  // a long Back keeps its usual meaning
+    } else {
+      returnFromJump();
+      return;
+    }
+  }
+
   if (deferredFootnoteBackDepth > 0) {
     // A new explicit long Back shortcut keeps its ordinary priority.
     if (mappedInput.isPressed(MappedInputManager::Button::Back) &&
@@ -3618,6 +3636,13 @@ void EpubReaderActivity::loop() {
 
   if (RenderLock::peek() && !touch.prev && !touch.next && wasBackReleased() &&
       mappedInput.getHeldTime() < ReaderUtils::GO_HOME_MS) {
+    // A jump's page may still be building: return once it is free instead of
+    // cancelling the build and leaving the book.
+    if (jumpReturn.valid && !longPressBackHandled) {
+      deferredJumpReturn = true;
+      automaticPageTurnActive = false;
+      return;
+    }
     const int depth = footnoteDepth.load(std::memory_order_relaxed);
     if (depth > 0 && !longPressBackHandled) {
       // The lock can be held by a redraw (e.g. after closing the drawer), not
@@ -3962,6 +3987,12 @@ void EpubReaderActivity::loop() {
 
   // Short press BACK goes directly to home (or restores position if viewing footnote)
   if (!touch.prev && !touch.next && wasBackReleased() && mappedInput.getHeldTime() < ReaderUtils::GO_HOME_MS) {
+    // Still on (or still opening) the page a Bookmarks/Chapters/Go to % jump
+    // landed on: go back. Turning the page there clears jumpReturn.
+    if (jumpReturn.valid && !searchHighlightActive && !activeFootnotePreview) {
+      returnFromJump();
+      return;
+    }
     const int depth = footnoteDepth.load(std::memory_order_relaxed);
     if (depth > 0) {
       if (!restoreSavedPosition(depth)) deferredFootnoteBackDepth = depth;
@@ -4510,6 +4541,7 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuAction action, const 
         if (!result.isCancelled) {
           const auto& chapterResult = std::get<ChapterResult>(result.data);
           RenderLock lock(*this);
+          armJumpReturn();
 
           clearFootnotePreviewState();
           currentSpineIndex = chapterResult.spineIndex;
@@ -4546,6 +4578,10 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuAction action, const 
       startActivityForResult(std::make_unique<EpubReaderPercentSelectionActivity>(renderer, mappedInput, bookProgress),
                              [this, returnToReaderMenu](const ActivityResult& result) {
                                if (!result.isCancelled) {
+                                 {
+                                   RenderLock lock(*this);
+                                   armJumpReturn();
+                                 }
                                  jumpToPercent(std::get<PercentResult>(result.data).percent);
                                } else if (returnToReaderMenu) {
                                  openReaderMenu();
@@ -5038,6 +5074,7 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuAction action, const 
         if (!result.isCancelled) {
           const auto& bm = std::get<BookmarkResult>(result.data);
           RenderLock lock(*this);
+          armJumpReturn();
           clearFootnotePreviewState();
           if (section && currentSpineIndex == bm.spineIndex) {
             bool resolved = false;
@@ -6287,56 +6324,121 @@ void EpubReaderActivity::startBookSearchActivity(const std::string& text, const 
   });
 }
 
-void EpubReaderActivity::captureSearchOrigin() {
-  searchOrigin = SearchOrigin{};
-  if (!section || section->pageCount == 0) return;
-  const int pageCount = section->estimatedTotalPages();
-  if (pageCount <= 0) return;
-  searchOrigin.valid = true;
-  searchOrigin.spineIndex = currentSpineIndex;
-  searchOrigin.page = section->currentPage;
-  searchOrigin.pageCount = pageCount;
-  searchOrigin.progress = static_cast<float>(section->currentPage) / static_cast<float>(pageCount);
-  if (const auto paragraph = section->getParagraphIndexForPage(static_cast<uint16_t>(section->currentPage))) {
-    searchOrigin.paragraphIndex = *paragraph;
-  }
-  searchOrigin.orientation = SETTINGS.orientation;
-}
+void EpubReaderActivity::captureSearchOrigin() { captureReadingSpot(searchOrigin); }
 
 void EpubReaderActivity::returnToSearchOrigin() {
   if (!searchOrigin.valid) return;
-  const SearchOrigin origin = searchOrigin;
-  {
-    RenderLock lock(*this);
-    clearPendingManualPageTurns();
-    clearFootnotePreviewState();
-    pendingAnchor.clear();
-    pendingSearchText.clear();
-    // Same layout as when the search started (orientation unchanged): the
-    // exact page. Otherwise find the spot again the way a bookmark does.
-    const bool sameLayout = origin.orientation == SETTINGS.orientation;
-    if (section && currentSpineIndex == origin.spineIndex && sameLayout &&
-        section->estimatedTotalPages() == origin.pageCount) {
-      section->currentPage = origin.page;
-      nextPageNumber = origin.page;
-      pendingPercentJump = false;
-      pendingParagraphIndex = UINT16_MAX;
-    } else if (sameLayout) {
-      currentSpineIndex = origin.spineIndex;
-      nextPageNumber = origin.page;
-      pendingPercentJump = false;
-      pendingParagraphIndex = UINT16_MAX;
-      section.reset();
-    } else {
-      currentSpineIndex = origin.spineIndex;
-      pendingSpineProgress = origin.progress;
-      pendingParagraphIndex = origin.paragraphIndex;
-      pendingPercentJump = true;
-      section.reset();
-    }
-  }
-  LOG_INF("ERS", "Search: back to the starting page (spine %d page %d)", origin.spineIndex, origin.page);
+  LOG_INF("ERS", "Search: back to the starting page (spine %d page %d)", searchOrigin.spineIndex, searchOrigin.page);
+  returnToReadingSpot(searchOrigin);
   armReadingPaceWarmup("search_return");
+}
+
+void EpubReaderActivity::captureReadingSpot(ReadingSpot& spot) const {
+  spot = ReadingSpot{};
+  if (!section || section->pageCount == 0) return;
+  const int pageCount = section->estimatedTotalPages();
+  if (pageCount <= 0) return;
+  spot.valid = true;
+  spot.spineIndex = currentSpineIndex;
+  spot.page = section->currentPage;
+  spot.pageCount = pageCount;
+  spot.progress = static_cast<float>(section->currentPage) / static_cast<float>(pageCount);
+  if (const auto paragraph = section->getParagraphIndexForPage(static_cast<uint16_t>(section->currentPage))) {
+    spot.paragraphIndex = *paragraph;
+  }
+  spot.orientation = SETTINGS.orientation;
+}
+
+void EpubReaderActivity::returnToReadingSpot(const ReadingSpot& spot) {
+  if (!spot.valid) return;
+  const ReadingSpot origin = spot;  // the caller's copy may be cleared below
+  RenderLock lock(*this);
+  clearPendingManualPageTurns();
+  clearFootnotePreviewState();
+  pendingAnchor.clear();
+  pendingSearchText.clear();
+  // Same layout as when the spot was saved (orientation unchanged): the exact
+  // page. Otherwise find the spot again the way a bookmark does.
+  const bool sameLayout = origin.orientation == SETTINGS.orientation;
+  if (section && currentSpineIndex == origin.spineIndex && sameLayout &&
+      section->estimatedTotalPages() == origin.pageCount) {
+    section->currentPage = origin.page;
+    nextPageNumber = origin.page;
+    pendingPercentJump = false;
+    pendingParagraphIndex = UINT16_MAX;
+  } else if (sameLayout) {
+    currentSpineIndex = origin.spineIndex;
+    nextPageNumber = origin.page;
+    pendingPercentJump = false;
+    pendingParagraphIndex = UINT16_MAX;
+    section.reset();
+  } else {
+    currentSpineIndex = origin.spineIndex;
+    pendingSpineProgress = origin.progress;
+    pendingParagraphIndex = origin.paragraphIndex;
+    pendingPercentJump = true;
+    section.reset();
+  }
+}
+
+void EpubReaderActivity::armJumpReturn() {
+  // Called just before a jump moves the reader. Only the most recent jump is
+  // kept: a second jump from the landing page still returns to the first spot.
+  if (jumpReturnShowing()) return;
+  captureReadingSpot(jumpReturn);
+  jumpLandingSpine = -1;
+  jumpLandingPage = -1;
+  deferredJumpReturn = false;
+  if (jumpReturn.valid) {
+    LOG_INF("ERS", "Jump: Back returns to spine %d page %d", jumpReturn.spineIndex, jumpReturn.page);
+  }
+}
+
+void EpubReaderActivity::trackJumpLanding() {
+  // Runs as each page is drawn. The first page drawn after a jump is where it
+  // landed; any other page means the reader has moved on, so Back goes back to
+  // its usual job.
+  if (!jumpReturn.valid || !section || activeFootnotePreview) return;
+  if (jumpLandingSpine < 0) {
+    jumpLandingSpine = currentSpineIndex;
+    jumpLandingPage = section->currentPage;
+    return;
+  }
+  if (currentSpineIndex != jumpLandingSpine || section->currentPage != jumpLandingPage) {
+    jumpReturn.valid = false;
+    LOG_INF("ERS", "Jump: kept reading here; Back no longer returns");
+  }
+}
+
+bool EpubReaderActivity::jumpReturnShowing() const {
+  return jumpReturn.valid && jumpLandingSpine >= 0 && !searchHighlightActive && !activeFootnotePreview;
+}
+
+void EpubReaderActivity::returnFromJump() {
+  const ReadingSpot spot = jumpReturn;
+  jumpReturn.valid = false;
+  deferredJumpReturn = false;
+  LOG_INF("ERS", "Jump: back to spine %d page %d", spot.spineIndex, spot.page);
+  returnToReadingSpot(spot);
+  armReadingPaceWarmup("jump_return");
+  requestUpdate();
+}
+
+void EpubReaderActivity::drawJumpReturnHint() const {
+  if (!jumpReturnShowing()) return;
+  // A small note in the bottom corner: the reader has no button hints on a
+  // page, so this says what Back will do on this one page.
+  char text[64];
+  snprintf(text, sizeof(text), "%s %s", tr(STR_ARROW_LEFT), tr(STR_BACK_TO_WHERE_YOU_WERE));
+  int top = 0, right = 0, bottom = 0, left = 0;
+  renderer.getOrientedViewableTRBL(&top, &right, &bottom, &left);
+  const int lineH = renderer.getLineHeight(SMALL_FONT_ID);
+  const int width = renderer.getTextWidth(SMALL_FONT_ID, text);
+  const int x = left + 6;
+  const int y = renderer.getScreenHeight() - bottom - lineH - 4;
+  renderer.fillRect(x - 4, y - 2, width + 8, lineH + 4, false);
+  renderer.drawRect(x - 4, y - 2, width + 8, lineH + 4, true);
+  renderer.drawText(SMALL_FONT_ID, x, y, text, true);
 }
 
 void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match, const std::string& text) {
@@ -8678,6 +8780,7 @@ void EpubReaderActivity::prepareCurrentSectionForRelayout(const bool preserveSta
 bool EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int fontId, const int layoutMarginTop,
                                         const int orientedMarginRight, const int orientedMarginBottom,
                                         const int orientedMarginLeft, const bool updatePanel) {
+  trackJumpLanding();
   // While searching in portrait, only lines that fit between the status bar
   // (moved to the top) and the button hints are drawn (not laid out again).
   const int orientedMarginTop = page ? fitSearchPageWindow(*page, fontId, layoutMarginTop) : layoutMarginTop;
@@ -9310,6 +9413,11 @@ void EpubReaderActivity::drawClippingHighlights(const Page& page, const int font
 }
 
 void EpubReaderActivity::renderStatusBar() const {
+  renderStatusBarContents();
+  drawJumpReturnHint();
+}
+
+void EpubReaderActivity::renderStatusBarContents() const {
   if (!statusBarVisible) {
     return;
   }

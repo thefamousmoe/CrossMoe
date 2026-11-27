@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### Added
+
+- Back after a jump: after jumping with Select Chapter, a bookmark, or Go to %, Back on the page you landed on returns to where you were (for checking a map, say), with a "« Back to where you were" note. Turning the page keeps you there and Back works as usual.
+
 ## [CrossMoe 1.1.0] - 2026-11-27
 
 ### Added

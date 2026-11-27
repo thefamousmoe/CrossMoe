@@ -292,9 +292,9 @@ class EpubReaderActivity final : public Activity {
   std::vector<std::string> searchTokens;
   std::string searchText;
   bool searchHighlightActive = false;
-  // Where the reader was when the search started. Back from a match reopens
-  // the results list; Back from that list returns here.
-  struct SearchOrigin {
+  // A place in the book to come back to: the exact page while the layout is
+  // unchanged, otherwise found again the way a bookmark is.
+  struct ReadingSpot {
     bool valid = false;
     int spineIndex = 0;
     int page = 0;
@@ -302,7 +302,17 @@ class EpubReaderActivity final : public Activity {
     float progress = 0.0f;
     uint16_t paragraphIndex = UINT16_MAX;
     uint8_t orientation = 0;
-  } searchOrigin;
+  };
+  // Where the reader was when the search started. Back from a match reopens
+  // the results list; Back from that list returns here.
+  ReadingSpot searchOrigin;
+  // Where the reader was before a Bookmarks, Chapters or Go to % jump. While
+  // the page jumped to is still showing, Back returns here; turning the page
+  // forgets it (see trackJumpLanding()).
+  ReadingSpot jumpReturn;
+  int jumpLandingSpine = -1;  // page jumped to, once drawn; -1 until then
+  int jumpLandingPage = -1;
+  bool deferredJumpReturn = false;  // Back pressed while the page was still being built
   unsigned long searchJumpMs = 0;
   ReaderDrawerState touchReaderDrawerState{};
 #if CROSSINK_APP_CAP_TOUCH
@@ -449,6 +459,7 @@ class EpubReaderActivity final : public Activity {
   void releaseGrayscaleStripScratch(bool force = false);
   void drawClippingHighlights(const Page& page, int fontId, int orientedMarginTop, int orientedMarginLeft) const;
   void renderStatusBar() const;
+  void renderStatusBarContents() const;
   int fitSearchPageWindow(Page& page, int fontId, int layoutMarginTop) const;
   bool selectedSearchMatchWords(const Page& page, std::pair<uint16_t, uint16_t>& range) const;
   bool searchMatchBand(const Page& page, int fontId, int& top, int& bottom) const;
@@ -583,6 +594,13 @@ class EpubReaderActivity final : public Activity {
   void startBookSearchActivity(const std::string& text, bool returnToOriginOnCancel);
   void captureSearchOrigin();
   void returnToSearchOrigin();
+  void captureReadingSpot(ReadingSpot& spot) const;
+  void returnToReadingSpot(const ReadingSpot& spot);
+  void armJumpReturn();
+  void returnFromJump();
+  void trackJumpLanding();
+  bool jumpReturnShowing() const;
+  void drawJumpReturnHint() const;
   void jumpToSearchResult(const BookmarkResult& match, const std::string& text);
   void jumpToSearchHit(int index);
   bool handleSearchModeInput(bool backReleased);
