@@ -259,8 +259,10 @@ like looking up a character in an X-Ray panel. Open it from the Reader Menu's
 5. On that page the match is boxed (only that one, even if the words appear
    more than once on the page). A line across the top shows which match this
    is (for example **Match 3/17**) on the left, and where you are on the
-   right: the chapter page and how far through the book. It takes the status
-   bar's place while the search buttons are showing. **Left** and **Right**
+   right: the chapter page and how far through the book. In portrait it takes
+   the status bar's place while the search buttons are showing; in landscape
+   the buttons sit at the side, so the bottom status bar stays too. Upside
+   down, the line moves to the bottom. **Left** and **Right**
    (**Prev** and **Next**) jump to the previous and next match anywhere in the
    book.
 6. **Back** returns to the results list to pick another passage. **Back**

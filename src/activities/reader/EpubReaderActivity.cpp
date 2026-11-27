@@ -6499,9 +6499,9 @@ void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId
     });
   }
 
-  // Search line across the top margin, in place of the status bar while the
-  // Back/Stay/Prev/Next hints use the bottom: which match this is on the left,
-  // and where the page is (chapter page and book percent) on the right.
+  // Search line in the top margin (bottom when upside down), in place of a
+  // status bar while the Back/Stay/Prev/Next hints show: which match this is
+  // on the left, and where the page is (chapter page and book percent) on the right.
   int viewTop = 0, viewRight = 0, viewBottom = 0, viewLeft = 0;
   renderer.getOrientedViewableTRBL(&viewTop, &viewRight, &viewBottom, &viewLeft);
   char matchLabel[32];
@@ -6520,7 +6520,10 @@ void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId
   const int lineH = renderer.getLineHeight(UI_10_FONT_ID) + 6;
   const int lineLeft = viewLeft + 4;
   const int lineRight = renderer.getScreenWidth() - viewRight - 4;
-  const int lineY = std::max(viewTop + 2, orientedMarginTop - lineH - 2);
+  // Upside down the hints cover the page top, so the line goes to the bottom.
+  const int lineY = SETTINGS.orientation == CrossPointSettings::INVERTED
+                        ? renderer.getScreenHeight() - viewBottom - lineH - 2
+                        : std::max(viewTop + 2, orientedMarginTop - lineH - 2);
   renderer.fillRect(lineLeft, lineY, lineRight - lineLeft, lineH, false);
   renderer.drawLine(lineLeft, lineY + lineH - 1, lineRight - 1, lineY + lineH - 1, true);
   renderer.drawText(UI_10_FONT_ID, lineLeft + 2, lineY + 3, matchLabel, true);
@@ -9226,9 +9229,18 @@ void EpubReaderActivity::drawClippingHighlights(const Page& page, const int font
 }
 
 void EpubReaderActivity::renderStatusBar() const {
-  // While a search match is showing, its Back/Stay/Prev/Next hints use the
-  // bottom and the search line (drawSearchHighlights()) replaces the bars.
-  if (!statusBarVisible || searchHighlightActive) {
+  if (!statusBarVisible) {
+    return;
+  }
+  // While a search match is showing, the search line (drawSearchHighlights())
+  // takes one bar's place and the Back/Stay/Prev/Next hints sit along the
+  // front-button edge: the page bottom in portrait, its top upside down, and
+  // the side in landscape, where the bottom bar still fits.
+  const bool searchLineAtBottom = searchHighlightActive && SETTINGS.orientation == CrossPointSettings::INVERTED;
+  const bool drawTopBar = !searchHighlightActive;
+  const bool drawBottomBar =
+      !searchHighlightActive || (SETTINGS.orientation != CrossPointSettings::PORTRAIT && !searchLineAtBottom);
+  if (!drawTopBar && !drawBottomBar) {
     return;
   }
 
@@ -9339,7 +9351,8 @@ void EpubReaderActivity::renderStatusBar() const {
     content.edgePadding = buttonInsets[0];
   }
 #endif
-  GUI.drawReaderStatusBar(renderer, ReaderStatusBarPosition::Top, content);
+  if (drawTopBar) GUI.drawReaderStatusBar(renderer, ReaderStatusBarPosition::Top, content);
+  if (!drawBottomBar) return;
   if (automaticPageTurnActive) {
     // Replace titles only after the configured top bar has been drawn.
     content.bookTitle = autoTurnLabel;
