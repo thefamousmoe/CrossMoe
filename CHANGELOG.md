@@ -26,6 +26,7 @@
 
 ### Added
 
+- Sync on Sleep (Settings > System > Sync Server) uploads the open EPUB's progress to your KOReader sync server when the reader goes to sleep, adapted from CrossInk's development branch (CrossPoint #4531). Compatible servers also get bookmarks, clippings, and reading sessions.
 - Zoom Image opens the largest picture on the page at 2x. Confirm zooms in to 3x and 4x, Back zooms out (from 2x it returns to the book), and the direction buttons pan. Each zoom level is drawn in gray from a temporary SD card copy, so moving around is quick. Open it from the Reader Menu's More tab, Quick Actions, or a button shortcut.
 - Search Book finds every place a word or phrase appears in an EPUB, with a progress bar, and jumps to a result. Back returns to where you were. Open it from the Reader Menu's More tab, Quick Actions, or a button shortcut.
 - Auto-Rotate in `Settings > Reader > Page Layout` and the Reader Menu's Layout tab follows the device's motion sensor in EPUB and TXT books: Flip, Sideways (never upside-down portrait), or Flip + Sideways, with a Short (0.25 s), Normal, or Long rotation delay. A "Rotating" notice shows while the page turns. It starts as soon as a book opens or the reader wakes, and it learns which way up the reader is held so a book closed in one orientation opens the right way for how it is picked up.
