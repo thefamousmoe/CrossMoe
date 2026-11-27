@@ -19,8 +19,9 @@ int poll(uint8_t currentOrientation);
 
 // Auto-Rotate shortcut: turns auto-rotate off, or back on in the mode it had
 // when the shortcut last turned it off (Flip + Sideways the first time).
-// Turning on restarts it as if the book had just opened. Changes SETTINGS;
-// the caller saves. Returns true when now on.
+// Changes SETTINGS only; the caller saves. Returns true when now on. However
+// it is turned back on, the next poll checks how the reader is held, as when a
+// book opens.
 bool toggleSetting();
 
 // Orientation to show after the device turned `quarterTurns` counter-clockwise

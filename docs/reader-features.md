@@ -257,14 +257,13 @@ like looking up a character in an X-Ray panel. Open it from the Reader Menu's
    (over two lines when needed, so the word always shows), its chapter, and
    its position in the book. Choose one to jump there.
 5. On that page the match is boxed (only that one, even if the words appear
-   more than once on the page). A line across the top shows which match this
-   is (for example **Match 3/17**) on the left, and where you are on the
-   right: the chapter page and how far through the book. In portrait it takes
-   the status bar's place while the search buttons are showing; in landscape
-   the buttons sit at the side, so the bottom status bar stays too. Upside
-   down, the line moves to the bottom. **Left** and **Right**
-   (**Prev** and **Next**) jump to the previous and next match anywhere in the
-   book.
+   more than once on the page). Which match this is (for example **4/17**)
+   shows after the **Next** button. In portrait the buttons cover the bottom
+   status bar, so it moves to the top of the page and the text moves down to
+   make room; in landscape the buttons sit at the side and the status bars
+   stay where they are. Upside down, the top status bar is left out because
+   the buttons are there. **Left** and **Right** (**Prev** and **Next**) jump
+   to the previous and next match anywhere in the book.
 6. **Back** returns to the results list to pick another passage. **Back**
    again on the list leaves the search and returns to the page you started
    from.
@@ -478,8 +477,12 @@ To switch it on and off quickly, add **Auto-Rotate** to Quick Actions or set it
 as a button shortcut (power button, side buttons, long-press Confirm or Back) in
 **Settings > Controls**. Each press turns Auto-Rotate off, or back on in the mode
 it was in before (Flip + Sideways the first time), and shows **Auto-Rotate: ON**
-or **Auto-Rotate: OFF**. Turning it on works like opening a book: once you hold
-the reader still, it turns the page to match how you are holding it.
+or **Auto-Rotate: OFF**.
+
+However Auto-Rotate is turned back on (shortcut, Reader Settings, or Settings),
+and after Quick Lock is unlocked, it works like opening a book: once you hold
+the reader still, it turns the page to match how you are holding it, even if
+the reader was turned while it was off.
 
 How it behaves:
 

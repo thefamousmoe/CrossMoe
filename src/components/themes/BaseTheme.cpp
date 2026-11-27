@@ -205,6 +205,39 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   renderer.setOrientation(orig_orientation);
 }
 
+void BaseTheme::drawButtonHintsCaption(GfxRenderer& renderer, const char* text) const {
+  if (gpio.hasTouch() || text == nullptr || text[0] == '\0') return;
+
+  const GfxRenderer::Orientation orig_orientation = renderer.getOrientation();
+  renderer.setOrientation(GfxRenderer::Orientation::Portrait);
+  const int pageWidth = renderer.getScreenWidth();
+  const int pageHeight = renderer.getScreenHeight();
+  // Same geometry as drawButtonHints().
+  constexpr int buttonWidth = 106;
+  constexpr int buttonHeight = BaseMetrics::values.buttonHintsHeight;
+  const int buttonY = BaseMetrics::values.buttonHintsHeight + UITheme::getButtonHintsBottomInset(renderer);
+  const int lastX = pageWidth >= 528 ? 384 : 350;
+  const int gapLeft = UITheme::getHintSafeX(renderer, lastX, buttonWidth) + buttonWidth + 3;
+  const int gapWidth = std::max(0, pageWidth - gapLeft - 2);
+
+  int fontId = UI_10_FONT_ID;
+  int textWidth = renderer.getTextWidth(fontId, text);
+  if (textWidth > gapWidth) {
+    fontId = SMALL_FONT_ID;
+    textWidth = renderer.getTextWidth(fontId, text);
+  }
+  int x = gapLeft + std::max(0, (gapWidth - textWidth) / 2);
+  int y = pageHeight - buttonY + std::max(1, (buttonHeight - renderer.getTextHeight(fontId)) / 2);
+  if (textWidth > gapWidth) {
+    // Still too wide: sit just above the last hint box instead.
+    x = UITheme::getHintSafeX(renderer, gapLeft - 3 - textWidth, textWidth);
+    y = pageHeight - buttonY - renderer.getLineHeight(fontId) - 2;
+  }
+  renderer.fillRect(x - 1, y, textWidth + 2, renderer.getLineHeight(fontId), false);
+  renderer.drawText(fontId, x, y, text);
+  renderer.setOrientation(orig_orientation);
+}
+
 void BaseTheme::drawSideButtonHints(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) const {
   if (gpio.hasTouch()) return;
 

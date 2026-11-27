@@ -20,9 +20,7 @@ bool toggleSetting() {
   SETTINGS.autoRotate = mode == CrossPointSettings::AUTO_ROTATE_OFF || mode > CrossPointSettings::AUTO_ROTATE_SIDEWAYS
                             ? CrossPointSettings::AUTO_ROTATE_ALL
                             : mode;
-  // Start fresh, as when a book opens: the next resting position is checked
-  // against what was learned and the page turned to match if needed.
-  onReaderEnter();
+  // poll() sees the change from off and checks how the reader is held.
   return true;
 }
 
@@ -58,6 +56,7 @@ struct State {
   int lastAutoOrientation = -1;
   bool lastAutoWasSideways = false;
   unsigned long lastAutoMs = 0;
+  uint8_t lastMode = 0xFF;  // mode on the previous poll; 0xFF right after a reset
 };
 State state;
 
@@ -129,17 +128,32 @@ void onReaderEnter() {
   state.lastAutoOrientation = -1;
   state.lastAutoWasSideways = false;
   state.lastOpenTurnMs = 0;
+  state.lastMode = 0xFF;
 }
 
 int poll(const uint8_t currentOrientation) {
   const uint8_t mode = halTiltSensor.isAvailable() ? SETTINGS.autoRotate : CrossPointSettings::AUTO_ROTATE_OFF;
   halTiltSensor.setAutoRotate(mode, flipHoldMs(), sidewaysHoldMs());
   const uint8_t readingZone = halTiltSensor.takeReadingPosition();
+  const uint8_t previousMode = state.lastMode;
+  state.lastMode = mode;
   if (mode == CrossPointSettings::AUTO_ROTATE_OFF) {
     state.lastOrientation = currentOrientation;
     return -1;
   }
   loadMirror();
+
+  // Turned on again (shortcut, Reader Settings, or Settings) after being off.
+  // The reader may have been turned meanwhile without the page following, so
+  // check how it is held now, as when a book opens, instead of assuming the
+  // page already matches.
+  if (previousMode == CrossPointSettings::AUTO_ROTATE_OFF) {
+    LOG_INF("ROT", "Auto-rotate back on: checking how the reader is held");
+    state.checkOpenPosition = true;
+    state.trustPairing = false;
+    state.lastAutoWasSideways = false;
+    state.lastOpenTurnMs = 0;
+  }
 
   // Someone other than auto-rotate changed the orientation (menu, button). The
   // held position no longer matches the page, so pair them again later.

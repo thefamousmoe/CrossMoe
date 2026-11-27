@@ -6499,43 +6499,27 @@ void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId
     });
   }
 
-  // Search line in the top margin (bottom when upside down), in place of a
-  // status bar while the Back/Stay/Prev/Next hints show: which match this is
-  // on the left, and where the page is (chapter page and book percent) on the right.
-  int viewTop = 0, viewRight = 0, viewBottom = 0, viewLeft = 0;
-  renderer.getOrientedViewableTRBL(&viewTop, &viewRight, &viewBottom, &viewLeft);
-  char matchLabel[32];
-  snprintf(matchLabel, sizeof(matchLabel), tr(STR_SEARCH_MATCH_FORMAT), searchSelection.selected + 1,
-           static_cast<unsigned>(searchSelection.hits.size()));
-  char placeLabel[48] = {};
-  if (section) {
-    int chapterPage = section->currentPage + 1;
-    int chapterPageCount = section->estimatedTotalPages();
-    float chapterProgress = 0.0f;
-    bool estimated = false;
-    resolveChapterGroupPageProgress(chapterPage, chapterPageCount, chapterProgress, estimated);
-    const int bookPercent = std::clamp(static_cast<int>(std::lround(getCurrentBookProgressPercent())), 0, 100);
-    snprintf(placeLabel, sizeof(placeLabel), tr(STR_SEARCH_PLACE_FORMAT), chapterPage, chapterPageCount, bookPercent);
-  }
-  const int lineH = renderer.getLineHeight(UI_10_FONT_ID) + 6;
-  const int lineLeft = viewLeft + 4;
-  const int lineRight = renderer.getScreenWidth() - viewRight - 4;
-  // Upside down the hints cover the page top, so the line goes to the bottom.
-  const int lineY = SETTINGS.orientation == CrossPointSettings::INVERTED
-                        ? renderer.getScreenHeight() - viewBottom - lineH - 2
-                        : std::max(viewTop + 2, orientedMarginTop - lineH - 2);
-  renderer.fillRect(lineLeft, lineY, lineRight - lineLeft, lineH, false);
-  renderer.drawLine(lineLeft, lineY + lineH - 1, lineRight - 1, lineY + lineH - 1, true);
-  renderer.drawText(UI_10_FONT_ID, lineLeft + 2, lineY + 3, matchLabel, true);
-  if (placeLabel[0] != '\0') {
-    const int placeW = renderer.getTextWidth(UI_10_FONT_ID, placeLabel);
-    renderer.drawText(UI_10_FONT_ID, lineRight - placeW - 2, lineY + 3, placeLabel, true);
-  }
-
   // What the buttons do while a match is showing (see handleSearchModeInput()).
   const auto labels = mappedInput.mapLabels(mappedInput.withBackArrow(tr(STR_BACK)), tr(STR_STAY),
                                             tr(STR_SEARCH_PREV_MATCH), tr(STR_SEARCH_NEXT_MATCH));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  // Which match this is, e.g. "4/17", after the last hint.
+  char counter[16];
+  snprintf(counter, sizeof(counter), "%d/%u", searchSelection.selected + 1,
+           static_cast<unsigned>(searchSelection.hits.size()));
+  GUI.drawButtonHintsCaption(renderer, counter);
+}
+
+int EpubReaderActivity::searchStatusBarShift(const int layoutMarginTop) const {
+  // Portrait search: the hints cover the bottom bar, so it is drawn at the top
+  // (renderStatusBar()) and the page moves down far enough to clear it.
+  if (!searchHighlightActive || !statusBarVisible || SETTINGS.orientation != CrossPointSettings::PORTRAIT) return 0;
+  const auto bottomBar = SETTINGS.readerStatusBar(ReaderStatusBarPosition::Bottom);
+  if (bottomBar.hidden) return 0;
+  const int barHeight = UITheme::getReaderStatusBarHeight(ReaderStatusBarPosition::Top, renderer, &bottomBar);
+  if (barHeight <= 0) return 0;
+  constexpr int gap = 6;
+  return std::max(0, UITheme::getTopStatusBarY(renderer) + barHeight + gap - layoutMarginTop);
 }
 
 void EpubReaderActivity::openFootnoteSelect(const bool returnToReaderMenu) {
@@ -8597,9 +8581,11 @@ void EpubReaderActivity::prepareCurrentSectionForRelayout(const bool preserveSta
   if (preserveStatusBarAnchor && statusBarRelayoutOffset) cachedVisibleTextOffset = statusBarRelayoutOffset;
 }
 
-bool EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int fontId, const int orientedMarginTop,
+bool EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int fontId, const int layoutMarginTop,
                                         const int orientedMarginRight, const int orientedMarginBottom,
                                         const int orientedMarginLeft, const bool updatePanel) {
+  // Drawn lower (not laid out again) while the status bar sits at the top for a search.
+  const int orientedMarginTop = layoutMarginTop + searchStatusBarShift(layoutMarginTop);
   const GfxRenderer::TextDarknessScope darkness(renderer, SETTINGS.textDarkness);
 #if defined(ENABLE_SERIAL_LOG) && LOG_LEVEL >= 2
   // Log after presentation so serial output does not delay the first pixels.
@@ -9232,17 +9218,16 @@ void EpubReaderActivity::renderStatusBar() const {
   if (!statusBarVisible) {
     return;
   }
-  // While a search match is showing, the search line (drawSearchHighlights())
-  // takes one bar's place and the Back/Stay/Prev/Next hints sit along the
-  // front-button edge: the page bottom in portrait, its top upside down, and
-  // the side in landscape, where the bottom bar still fits.
-  const bool searchLineAtBottom = searchHighlightActive && SETTINGS.orientation == CrossPointSettings::INVERTED;
-  const bool drawTopBar = !searchHighlightActive;
-  const bool drawBottomBar =
-      !searchHighlightActive || (SETTINGS.orientation != CrossPointSettings::PORTRAIT && !searchLineAtBottom);
-  if (!drawTopBar && !drawBottomBar) {
-    return;
-  }
+  // While a search match is showing, the Back/Stay/Prev/Next hints sit along
+  // the front-button edge: the page bottom in portrait, so the bottom bar is
+  // drawn at the top instead (the page moves down, see searchStatusBarShift());
+  // the page top upside down, so the top bar is left out; the side in
+  // landscape, where both bars still fit.
+  const bool searchPortrait = searchHighlightActive && SETTINGS.orientation == CrossPointSettings::PORTRAIT;
+  const bool searchInverted = searchHighlightActive && SETTINGS.orientation == CrossPointSettings::INVERTED;
+  const bool drawTopBar = !searchPortrait && !searchInverted;
+  const bool drawBottomBar = !searchPortrait;
+  const bool drawBottomBarAtTop = searchPortrait;
 
   const int estimatedPageCount = section->estimatedTotalPages();
   int currentPage = section->currentPage + 1;
@@ -9352,7 +9337,7 @@ void EpubReaderActivity::renderStatusBar() const {
   }
 #endif
   if (drawTopBar) GUI.drawReaderStatusBar(renderer, ReaderStatusBarPosition::Top, content);
-  if (!drawBottomBar) return;
+  if (!drawBottomBar && !drawBottomBarAtTop) return;
   if (automaticPageTurnActive) {
     // Replace titles only after the configured top bar has been drawn.
     content.bookTitle = autoTurnLabel;
@@ -9362,6 +9347,12 @@ void EpubReaderActivity::renderStatusBar() const {
 #if !CROSSINK_APP_CAP_TOUCH
   content.edgePadding = buttonInsets[2];
 #endif
+  if (drawBottomBarAtTop) {
+    content.edgePadding = 0;
+    const auto bottomBar = SETTINGS.readerStatusBar(ReaderStatusBarPosition::Bottom);
+    GUI.drawReaderStatusBar(renderer, ReaderStatusBarPosition::Top, content, &bottomBar);
+    return;
+  }
   GUI.drawReaderStatusBar(renderer, ReaderStatusBarPosition::Bottom, content);
 }
 

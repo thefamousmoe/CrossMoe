@@ -110,6 +110,7 @@ inline esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause() { return ESP_SLEEP_
 #include "activities/boot_sleep/ImageFolderIndex.h"
 #include "activities/home/BookActions.h"
 #include "activities/reader/KOReaderSyncActivity.h"
+#include "activities/reader/ReaderAutoRotate.h"
 #include "activities/reader/ReaderUtils.h"
 #include "activities/reader/ReadingStatsUtils.h"
 #include "activities/reader/StatsBackup.h"
@@ -636,6 +637,9 @@ void notifyQuickLockChanged() {
     }
     if (!restoredBadgeBackdrop) (void)activityManager.requestUpdateAndWait();
     activityManager.notifyInputLockChanged(false);
+    // The reader may have been turned while locked: auto-rotate checks how it
+    // is held now, as when a book opens, instead of carrying on from before.
+    ReaderAutoRotate::onReaderEnter();
   }
 }
 
