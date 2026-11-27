@@ -234,6 +234,23 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   renderer.setOrientation(orig_orientation);
 }
 
+void BaseTheme::drawHintsCaption(GfxRenderer& renderer, const char* caption, const int lastBoxRight, const int boxY,
+                                 const int boxHeight) {
+  if (caption == nullptr || caption[0] == '\0') return;
+  const auto edges = renderer.getViewableInsets().rotated(static_cast<unsigned>(renderer.getOrientation())).edges;
+  const int room = renderer.getScreenWidth() - static_cast<int>(edges[1]) - lastBoxRight - 8;
+  int fontId = UI_10_FONT_ID;
+  int width = renderer.getTextWidth(fontId, caption);
+  if (width > room) {
+    fontId = SMALL_FONT_ID;
+    width = renderer.getTextWidth(fontId, caption);
+  }
+  const int x = lastBoxRight + 4;
+  const int y = boxY + std::max(1, (boxHeight - renderer.getTextHeight(fontId)) / 2);
+  renderer.fillRect(x - 2, boxY, width + 4, boxHeight, false);
+  renderer.drawText(fontId, x, y, caption);
+}
+
 void BaseTheme::drawSideButtonHints(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) const {
   if (gpio.hasTouch()) return;
 

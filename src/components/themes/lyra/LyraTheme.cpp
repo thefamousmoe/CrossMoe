@@ -373,7 +373,7 @@ void LyraTheme::drawListWithMetrics(const GfxRenderer& renderer, Rect rect, int 
 }
 
 void LyraTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
-                                const char* btn4, const bool allowInvertedText) const {
+                                const char* btn4, const bool allowInvertedText, const char* trailingCaption) const {
   if (gpio.hasTouch()) return;
 
   const GfxRenderer::Orientation orig_orientation = renderer.getOrientation();
@@ -410,6 +410,12 @@ void LyraTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
       renderer.drawRoundedRect(x, smallButtonY, buttonWidth, smallButtonHeight, 1, cornerRadius, true, true, false,
                                false, true);
     }
+  }
+
+  if (trailingCaption != nullptr && labels[3] != nullptr && labels[3][0] != '\0') {
+    drawHintsCaption(renderer, trailingCaption,
+                     UITheme::getHintSafeX(renderer, buttonPositions[3], buttonWidth) + buttonWidth,
+                     pageHeight - buttonY, buttonHeight);
   }
 
   renderer.setOrientation(invertText ? GfxRenderer::Orientation::PortraitInverted : GfxRenderer::Orientation::Portrait);

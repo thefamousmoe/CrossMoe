@@ -400,7 +400,8 @@ void RoundedRaffTheme::drawList(const GfxRenderer& renderer, Rect rect, int item
 }
 
 void RoundedRaffTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
-                                       const char* btn4, const bool allowInvertedText) const {
+                                       const char* btn4, const bool allowInvertedText,
+                                       const char* trailingCaption) const {
   if (gpio.hasTouch()) return;
 
   const GfxRenderer::Orientation origOrientation = renderer.getOrientation();
@@ -433,7 +434,12 @@ void RoundedRaffTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, 
   // Callers should provide the button labels. If a label is not specified, it should render empty.
   const std::string selectText = (leftInnerLabel && leftInnerLabel[0] != '\0') ? std::string(leftInnerLabel) : "";
   const std::string upText = (rightInnerLabel && rightInnerLabel[0] != '\0') ? std::string(rightInnerLabel) : "";
-  const std::string downText = (rightOuterLabel && rightOuterLabel[0] != '\0') ? std::string(rightOuterLabel) : "";
+  std::string downText = (rightOuterLabel && rightOuterLabel[0] != '\0') ? std::string(rightOuterLabel) : "";
+  // The hint groups span the full width here, so a caption joins the last label.
+  if (trailingCaption != nullptr && trailingCaption[0] != '\0' && !downText.empty()) {
+    downText += "  ";
+    downText += trailingCaption;
+  }
   if (!selectText.empty()) {
     TouchRegistry::getInstance().add(
         Rect{leftGroupX + groupWidth / 2, outlineY, groupWidth - groupWidth / 2, hintHeight}, HalGPIO::BTN_CONFIRM,

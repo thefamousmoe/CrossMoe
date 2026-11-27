@@ -285,6 +285,10 @@ class BaseTheme {
   virtual void drawButtonHints(GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
                                const char* btn4, bool allowInvertedText = false,
                                const char* trailingCaption = nullptr) const;
+  // Draws a drawButtonHints() trailing caption (such as a match count) just
+  // right of the last hint box, in portrait coordinates; the small font is used
+  // when the normal one does not fit before the screen edge.
+  static void drawHintsCaption(GfxRenderer& renderer, const char* caption, int lastBoxRight, int boxY, int boxHeight);
   virtual void drawSideButtonHints(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) const;
   virtual int getMenuRowHeight(const GfxRenderer& renderer) const;
   virtual int getListRowStep(bool hasSubtitle, int rowHeightScale = 1) const;

@@ -634,7 +634,7 @@ Rect MinimalTheme::buttonMenuPanelRect(const GfxRenderer& renderer, const int bu
 }
 
 void MinimalTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
-                                   const char* btn4, const bool allowInvertedText) const {
+                                   const char* btn4, const bool allowInvertedText, const char* trailingCaption) const {
   if (gpio.hasTouch()) {
     homeButtonHintSelection = -1;
     return;
@@ -675,6 +675,12 @@ void MinimalTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, cons
       renderer.drawRoundedRect(x, smallButtonY, buttonWidth, smallButtonHeight, 1, kButtonCornerRadius, true, true,
                                false, false, true);
     }
+  }
+
+  if (trailingCaption != nullptr && labels[3] != nullptr && labels[3][0] != '\0') {
+    drawHintsCaption(renderer, trailingCaption,
+                     UITheme::getHintSafeX(renderer, buttonPositions[3], buttonWidth) + buttonWidth,
+                     pageHeight - buttonY, buttonHeight);
   }
 
   renderer.setOrientation(invertText ? GfxRenderer::Orientation::PortraitInverted : GfxRenderer::Orientation::Portrait);
