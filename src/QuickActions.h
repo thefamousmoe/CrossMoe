@@ -63,13 +63,14 @@ inline constexpr std::array<StrId, CrossPointSettings::QUICK_ACTION_SLOT_ACTION_
 
 // Shared display order for shortcut pickers. The values remain the persisted
 // SHORT_PWRBTN IDs; only their presentation order is centralized here.
-inline constexpr std::array<CrossPointSettings::SHORT_PWRBTN, 38> shortcutActionOrder = {
+inline constexpr std::array<CrossPointSettings::SHORT_PWRBTN, 39> shortcutActionOrder = {
     CrossPointSettings::IGNORE,
     CrossPointSettings::SLEEP,
     CrossPointSettings::PAGE_TURN,
     CrossPointSettings::PREVIOUS_PAGE,
     CrossPointSettings::SELECT_CHAPTER,
     CrossPointSettings::ROTATE_FLIP,
+    CrossPointSettings::TOGGLE_AUTO_ROTATE,
     CrossPointSettings::ZOOM_IMAGE,
     CrossPointSettings::SEARCH_BOOK,
     CrossPointSettings::TOGGLE_BOOKMARK,
@@ -113,6 +114,8 @@ inline bool isActionAvailable(const uint8_t action) {
       action == CrossPointSettings::ROTATE_FLIP || action == CrossPointSettings::ZOOM_IMAGE ||
       action == CrossPointSettings::SEARCH_BOOK)
     return true;
+  // Needs the motion sensor (X3); hidden on devices without one.
+  if (action == CrossPointSettings::TOGGLE_AUTO_ROTATE) return supportsTiltPageTurn();
   if (action == CrossPointSettings::QUICK_ACTIONS || action == CrossPointSettings::QUICK_LOCK) return true;
   if (action == CrossPointSettings::TOGGLE_FRONTLIGHT) return Frontlight.present();
   if (action == CrossPointSettings::TOGGLE_TOUCHSCREEN || action == CrossPointSettings::TOGGLE_PAGE_TURN_GESTURES)
@@ -149,6 +152,7 @@ inline StrId actionLabel(const uint8_t action) {
   if (action == CrossPointSettings::ROTATE_FLIP) return StrId::STR_ROTATE_FLIP;
   if (action == CrossPointSettings::ZOOM_IMAGE) return StrId::STR_ZOOM_IMAGE;
   if (action == CrossPointSettings::SEARCH_BOOK) return StrId::STR_SEARCH_BOOK;
+  if (action == CrossPointSettings::TOGGLE_AUTO_ROTATE) return StrId::STR_AUTO_ROTATE;
   return StrId::STR_HOME_BUTTON_LOCK;
 }
 

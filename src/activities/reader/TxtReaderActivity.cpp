@@ -248,6 +248,13 @@ void TxtReaderActivity::loop() {
     return;
   }
 
+  if (SETTINGS.longPressMenuAction == CrossPointSettings::LONG_MENU_TOGGLE_AUTO_ROTATE &&
+      mappedInput.isPressed(MappedInputManager::Button::Confirm) && mappedInput.getHeldTime() >= LONG_PRESS_MENU_MS) {
+    longPressMenuHandled = true;
+    toggleAutoRotate();
+    return;
+  }
+
   if (SETTINGS.longPressMenuAction == CrossPointSettings::LONG_MENU_CHANGE_FONT &&
       mappedInput.isPressed(MappedInputManager::Button::Confirm) && mappedInput.getHeldTime() >= LONG_PRESS_MENU_MS) {
     longPressMenuHandled = true;
@@ -493,6 +500,7 @@ bool TxtReaderActivity::consumeLongPowerButtonHold() {
 bool TxtReaderActivity::supportsQuickAction(const CrossPointSettings::SHORT_PWRBTN action) {
   switch (action) {
     case CrossPointSettings::SHORT_PWRBTN::ROTATE_FLIP:
+    case CrossPointSettings::SHORT_PWRBTN::TOGGLE_AUTO_ROTATE:
     case CrossPointSettings::SHORT_PWRBTN::PREVIOUS_PAGE:
     case CrossPointSettings::SHORT_PWRBTN::SLEEP:
     case CrossPointSettings::SHORT_PWRBTN::FORCE_REFRESH:
@@ -519,6 +527,9 @@ bool TxtReaderActivity::executeReaderShortcutAction(const CrossPointSettings::SH
   switch (action) {
     case CrossPointSettings::SHORT_PWRBTN::ROTATE_FLIP:
       return applyReaderOrientation(ReaderUtils::flippedOrientation(SETTINGS.orientation));
+    case CrossPointSettings::SHORT_PWRBTN::TOGGLE_AUTO_ROTATE:
+      toggleAutoRotate();
+      return true;
     case CrossPointSettings::SHORT_PWRBTN::PREVIOUS_PAGE:
       requestPageTurn(true, false);
       return true;
@@ -594,11 +605,26 @@ void TxtReaderActivity::toggleHomeButtonInReader() {
   requestUpdate();
 }
 
+void TxtReaderActivity::toggleAutoRotate() {
+  if (!halTiltSensor.isAvailable()) return;
+  const bool enabled = ReaderAutoRotate::toggleSetting();
+  if (!SETTINGS.saveToFile()) {
+    LOG_ERR("TXT", "Failed to save auto-rotate setting");
+  }
+  LOG_INF("ROT", "Auto-rotate %s by shortcut (mode %u)", enabled ? "on" : "off", SETTINGS.autoRotate);
+  drawToast(renderer, enabled ? tr(STR_AUTO_ROTATE_TOGGLE_ON) : tr(STR_AUTO_ROTATE_TOGGLE_OFF));
+  delay(1000);
+  requestUpdate();
+}
+
 bool TxtReaderActivity::executeLongPressBackAction() {
   if (ReaderUtils::dispatchNavigationLongPressAction(SETTINGS.longPressBackAction)) return true;
   switch (static_cast<CrossPointSettings::LONG_PRESS_MENU_ACTION>(SETTINGS.longPressBackAction)) {
     case CrossPointSettings::LONG_PRESS_MENU_ACTION::LONG_MENU_ROTATE_FLIP:
       return applyReaderOrientation(ReaderUtils::flippedOrientation(SETTINGS.orientation));
+    case CrossPointSettings::LONG_PRESS_MENU_ACTION::LONG_MENU_TOGGLE_AUTO_ROTATE:
+      toggleAutoRotate();
+      return true;
     case CrossPointSettings::LONG_PRESS_MENU_ACTION::LONG_MENU_SLEEP:
       enterDeepSleep();
       return true;

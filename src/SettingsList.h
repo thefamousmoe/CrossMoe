@@ -522,6 +522,8 @@ inline uint8_t shortcutRawValue(const ShortcutOptionCatalog catalog, const Cross
           return LongPress::LONG_MENU_ZOOM_IMAGE;
         case Action::SEARCH_BOOK:
           return LongPress::LONG_MENU_SEARCH_BOOK;
+        case Action::TOGGLE_AUTO_ROTATE:
+          return LongPress::LONG_MENU_TOGGLE_AUTO_ROTATE;
         case Action::PAGE_TURN:
         case Action::PREVIOUS_PAGE:
         case Action::NEARBY_POSITION_SYNC:
@@ -662,9 +664,11 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
     for (auto& setting : v) {
       if (settingKeyIs(setting, "shortPwrBtn") || settingKeyIs(setting, "longPwrBtn")) {
         removeEnumRawValue(setting, static_cast<uint8_t>(CrossPointSettings::TOGGLE_TILT_PAGE_TURN));
+        removeEnumRawValue(setting, static_cast<uint8_t>(CrossPointSettings::TOGGLE_AUTO_ROTATE));
       } else if (setting.nameId == StrId::STR_LONG_PRESS_MENU_ACTION ||
                  setting.nameId == StrId::STR_LONG_PRESS_BACK_ACTION) {
         removeEnumRawValue(setting, static_cast<uint8_t>(CrossPointSettings::LONG_MENU_TOGGLE_TILT_PAGE_TURN));
+        removeEnumRawValue(setting, static_cast<uint8_t>(CrossPointSettings::LONG_MENU_TOGGLE_AUTO_ROTATE));
       }
     }
   }

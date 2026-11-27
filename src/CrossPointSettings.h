@@ -316,6 +316,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     ZOOM_IMAGE = 41,
     // Pick a word on the page and list every place it appears in the book.
     SEARCH_BOOK = 42,
+    // Turn auto-rotate off, or back on in the mode it last used (readers only).
+    TOGGLE_AUTO_ROTATE = 43,
     SHORT_PWRBTN_COUNT
   };
 
@@ -459,6 +461,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     LONG_MENU_TOGGLE_PAGE_TURN_GESTURES = 29,
     LONG_MENU_ZOOM_IMAGE = 30,
     LONG_MENU_SEARCH_BOOK = 31,
+    LONG_MENU_TOGGLE_AUTO_ROTATE = 32,
     LONG_PRESS_MENU_ACTION_COUNT
   };
 
@@ -593,6 +596,9 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Follow the device when it is turned upside down and/or sideways in a reader.
   uint8_t autoRotate = AUTO_ROTATE_OFF;
   uint8_t autoRotateDelay = AUTO_ROTATE_DELAY_NORMAL;
+  // Mode the Auto-Rotate shortcut turns back on. Not shown in the settings
+  // list; remembered whenever the shortcut turns auto-rotate off.
+  uint8_t autoRotateLastOn = AUTO_ROTATE_ALL;
   // Legacy layouts are retained for migration only.
   uint8_t frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
   uint8_t sideButtonLayout = PREV_NEXT;

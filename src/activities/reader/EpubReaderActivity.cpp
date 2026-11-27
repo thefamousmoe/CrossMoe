@@ -3749,6 +3749,7 @@ void EpubReaderActivity::loop() {
   if (pendingTiltPageTurnFeedback && transientFeedbackDismissed(tiltPageTurnFeedbackShowTime)) {
     pendingTiltPageTurnFeedback = false;
     homeButtonInReaderFeedback = false;
+    autoRotateFeedback = false;
     requestUpdate();
     return;
   }
@@ -5861,6 +5862,21 @@ void EpubReaderActivity::executeReaderQuickAction(CrossPointSettings::LONG_PRESS
     case CrossPointSettings::LONG_MENU_ZOOM_IMAGE:
       openImageZoom();
       break;
+    case CrossPointSettings::LONG_MENU_TOGGLE_AUTO_ROTATE:
+      if (halTiltSensor.isAvailable()) {
+        const bool enabled = ReaderAutoRotate::toggleSetting();
+        if (!saveGlobalSettingsPreservingBookOverrides()) {
+          LOG_ERR("ERS", "Failed to save auto-rotate setting");
+        }
+        LOG_INF("ROT", "Auto-rotate %s by shortcut (mode %u)", enabled ? "on" : "off", SETTINGS.autoRotate);
+        tiltPageTurnFeedbackEnabled = enabled;
+        homeButtonInReaderFeedback = false;
+        autoRotateFeedback = true;
+        pendingTiltPageTurnFeedback = true;
+        tiltPageTurnFeedbackShowTime = millis();
+        requestUpdate();
+      }
+      break;
     case CrossPointSettings::LONG_MENU_SEARCH_BOOK:
       if (epub) {
         // Swallow the release of whichever button opened the picker; these
@@ -5927,6 +5943,9 @@ bool EpubReaderActivity::handleShortcutAction(const uint8_t rawAction) {
       return true;
     case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::TOGGLE_AUTO_ROTATE:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_TOGGLE_AUTO_ROTATE);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);
@@ -6035,6 +6054,9 @@ bool EpubReaderActivity::handleShortcutAction(const CrossPointSettings::SHORT_PW
       return true;
     case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::TOGGLE_AUTO_ROTATE:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_TOGGLE_AUTO_ROTATE);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);
@@ -6528,6 +6550,9 @@ bool EpubReaderActivity::executeShortPowerButtonAction() {
     case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
       return true;
+    case CrossPointSettings::SHORT_PWRBTN::TOGGLE_AUTO_ROTATE:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_TOGGLE_AUTO_ROTATE);
+      return true;
     case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);
       return true;
@@ -6649,6 +6674,9 @@ bool EpubReaderActivity::executeLongPowerButtonAction() {
       return true;
     case CrossPointSettings::SHORT_PWRBTN::ZOOM_IMAGE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_ZOOM_IMAGE);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::TOGGLE_AUTO_ROTATE:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_TOGGLE_AUTO_ROTATE);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);
@@ -6790,6 +6818,7 @@ void EpubReaderActivity::showCompletedFeedback(bool isCompleted) {
 void EpubReaderActivity::showTiltPageTurnFeedback(bool enabled) {
   tiltPageTurnFeedbackEnabled = enabled;
   homeButtonInReaderFeedback = false;
+  autoRotateFeedback = false;
   pendingTiltPageTurnFeedback = true;
   tiltPageTurnFeedbackShowTime = millis();
 }
@@ -6803,6 +6832,7 @@ void EpubReaderActivity::toggleHomeButtonInReader() {
   mappedInput.clearDeferredHomeGesture();
   tiltPageTurnFeedbackEnabled = SETTINGS.homeButtonInReaderEnabled;
   homeButtonInReaderFeedback = true;
+  autoRotateFeedback = false;
   pendingTiltPageTurnFeedback = true;
   tiltPageTurnFeedbackShowTime = millis();
   requestUpdate();
@@ -8704,7 +8734,9 @@ bool EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int fo
       drawToastBuffer(renderer, msg);
     }
     if (pendingTiltPageTurnFeedback) {
-      const char* msg = homeButtonInReaderFeedback
+      const char* msg = autoRotateFeedback ? (tiltPageTurnFeedbackEnabled ? tr(STR_AUTO_ROTATE_TOGGLE_ON)
+                                                                          : tr(STR_AUTO_ROTATE_TOGGLE_OFF))
+                        : homeButtonInReaderFeedback
                             ? (tiltPageTurnFeedbackEnabled ? tr(STR_HOME_BUTTON_ENABLED) : tr(STR_HOME_BUTTON_DISABLED))
                             : (tiltPageTurnFeedbackEnabled ? tr(STR_TILT_TO_TURN_ON) : tr(STR_TILT_TO_TURN_OFF));
       drawToastBuffer(renderer, msg);

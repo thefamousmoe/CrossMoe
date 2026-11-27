@@ -93,6 +93,7 @@ class TxtReaderActivity final : public Activity {
   void loadProgress();
   void toggleDarkMode();
   void toggleHomeButtonInReader();
+  void toggleAutoRotate();
   bool consumeLongPowerButtonRelease();
   bool consumeLongPowerButtonHold();
   static bool supportsQuickAction(CrossPointSettings::SHORT_PWRBTN action);

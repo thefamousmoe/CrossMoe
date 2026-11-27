@@ -256,7 +256,8 @@ bool isValidQuickActionSlot(const uint8_t action) {
          action == CrossPointSettings::LIBRARY || action == CrossPointSettings::HOME_READER ||
          action == CrossPointSettings::BACK_HOME || action == CrossPointSettings::SELECT_CHAPTER ||
          action == CrossPointSettings::TOGGLE_PAGE_TURN_GESTURES || action == CrossPointSettings::ROTATE_FLIP ||
-         action == CrossPointSettings::ZOOM_IMAGE || action == CrossPointSettings::SEARCH_BOOK;
+         action == CrossPointSettings::ZOOM_IMAGE || action == CrossPointSettings::SEARCH_BOOK ||
+         action == CrossPointSettings::TOGGLE_AUTO_ROTATE;
 }
 
 uint8_t migrateTiltDirectionValue(const uint8_t direction) {
@@ -552,6 +553,7 @@ void CrossPointSettings::toJson(JsonDocument& doc) const {
   doc["tiltPageTurnDirectionSchema"] = TILT_DIRECTION_SCHEMA_CURRENT;
   doc["clockDateHasBeenSynced"] = clockDateHasBeenSynced;
   doc["screenInverted"] = screenInverted;
+  doc["autoRotateLastOn"] = autoRotateLastOn;
   doc["pluginsEnabled"] = pluginsEnabled;
   doc["pluginHubPromptHidden"] = pluginHubPromptHidden;
 }
@@ -571,6 +573,9 @@ bool CrossPointSettings::fromJson(JsonVariantConst doc, bool importingCrossPoint
       ((doc["tiltPageTurnDirectionSchema"] | static_cast<uint8_t>(1)) < TILT_DIRECTION_SCHEMA_CURRENT);
   if (doc["statusBarChapterPageCount"].isNull()) applyLegacyStatusBarSettings(*this);
   screenInverted = clamp(doc["screenInverted"] | screenInverted, 2, screenInverted);
+  autoRotateLastOn = doc["autoRotateLastOn"] | static_cast<uint8_t>(AUTO_ROTATE_ALL);
+  if (autoRotateLastOn == AUTO_ROTATE_OFF || autoRotateLastOn > AUTO_ROTATE_SIDEWAYS)
+    autoRotateLastOn = AUTO_ROTATE_ALL;
 
   forEachBaseSetting([&](const SettingInfo& info) {
     if (!info.key || (!info.valuePtr && !info.value16Ptr && !info.stringOffset)) return;

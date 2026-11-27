@@ -10,6 +10,22 @@
 
 namespace ReaderAutoRotate {
 
+bool toggleSetting() {
+  if (SETTINGS.autoRotate != CrossPointSettings::AUTO_ROTATE_OFF) {
+    SETTINGS.autoRotateLastOn = SETTINGS.autoRotate;
+    SETTINGS.autoRotate = CrossPointSettings::AUTO_ROTATE_OFF;
+    return false;
+  }
+  const uint8_t mode = SETTINGS.autoRotateLastOn;
+  SETTINGS.autoRotate = mode == CrossPointSettings::AUTO_ROTATE_OFF || mode > CrossPointSettings::AUTO_ROTATE_SIDEWAYS
+                            ? CrossPointSettings::AUTO_ROTATE_ALL
+                            : mode;
+  // Start fresh, as when a book opens: the next resting position is checked
+  // against what was learned and the page turned to match if needed.
+  onReaderEnter();
+  return true;
+}
+
 #ifdef SIMULATOR
 // The simulator's stand-in sensor has no motion data.
 void onReaderEnter() {}

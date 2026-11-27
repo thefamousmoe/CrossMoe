@@ -329,6 +329,7 @@ class EpubReaderActivity final : public Activity {
   bool pendingTiltPageTurnFeedback = false;
   bool tiltPageTurnFeedbackEnabled = false;
   bool homeButtonInReaderFeedback = false;
+  bool autoRotateFeedback = false;
   unsigned long tiltPageTurnFeedbackShowTime = 0UL;
   bool pendingRenderModeToast = false;
   bool renderModeToastShown = false;

@@ -468,6 +468,13 @@ or Long (1.6 s / 3 s). It shows as Disabled while Auto-Rotate is off.
 When it turns the page, a **Rotating** notice shows until the page is drawn
 again in the new direction.
 
+To switch it on and off quickly, add **Auto-Rotate** to Quick Actions or set it
+as a button shortcut (power button, side buttons, long-press Confirm or Back) in
+**Settings > Controls**. Each press turns Auto-Rotate off, or back on in the mode
+it was in before (Flip + Sideways the first time), and shows **Auto-Rotate: ON**
+or **Auto-Rotate: OFF**. Turning it on works like opening a book: once you hold
+the reader still, it turns the page to match how you are holding it.
+
 How it behaves:
 
 - It starts working on its own when you open a book or wake the reader. Each

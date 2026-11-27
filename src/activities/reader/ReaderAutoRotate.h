@@ -17,6 +17,12 @@ void onReaderEnter();
 // SETTINGS.orientation.
 int poll(uint8_t currentOrientation);
 
+// Auto-Rotate shortcut: turns auto-rotate off, or back on in the mode it had
+// when the shortcut last turned it off (Flip + Sideways the first time).
+// Turning on restarts it as if the book had just opened. Changes SETTINGS;
+// the caller saves. Returns true when now on.
+bool toggleSetting();
+
 // Orientation to show after the device turned `quarterTurns` counter-clockwise
 // quarter turns in the sensor's frame. `mirrored` flips the sideways direction.
 //
