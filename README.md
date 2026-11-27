@@ -29,8 +29,10 @@ Finds every place a name or phrase appears in the book, a bit like Kindle's X-Ra
 1. Start **Search Book**. The word picker opens on the current page.
 2. Pick a word, or hold **Confirm** to select a phrase.
 3. A progress bar shows while the book is searched. **Back** cancels.
-4. Choose a result. The reader opens the page that shows it, whatever your font and size settings, and draws a box around the word with a counter like `3/12`.
-5. **Left/Right** jump to the previous and next match in the book. **Back** clears the box and you keep reading from there.
+4. The results list shows each passage over up to two lines, so the word and a few words on either side always show. Choose one, and the reader opens the page that shows it, whatever your font and size settings, and draws a box around the word.
+5. **Left/Right** (**Prev/Next**) jump to the previous and next match in the book. The match number, like `4/17`, sits beside the Next button.
+6. Your place in the book stays visible: in portrait your bottom status bar moves to the top of the page while the search buttons show, with the text fitting between the two; in landscape both status bars stay where they are.
+7. **Back** returns to the results list to pick another passage, and **Back** again takes you to the page you started from. **Confirm** (**Stay**) ends the search and keeps you reading on the page you're on.
 
 ### Auto-Rotate
 
@@ -42,7 +44,9 @@ Lets EPUB and TXT books follow the way you hold the reader, using the X3's motio
 - **Rotation Delay** (Short / Normal / Long) sets how long the reader must rest in its new position first. Short is a quarter second.
 - A **Rotating** notice shows while the page turns.
 
-It starts working as soon as a book opens or the reader wakes up. It ignores the reader while it's lying flat or moving. If a sideways turn ever comes out upside down, use **Rotate Page 180°** within 20 seconds and it remembers the correction. Turn on **Orientation Aware** for the buttons in **Settings > Controls** so page turns follow the rotated screen.
+It starts working as soon as a book opens or the reader wakes up, and learns which way is up, so a book closed in landscape opens in portrait if that's how you pick it up. It ignores the reader while it's lying flat or moving.
+
+To switch it off and on quickly (for example, reading lying down), add **Auto-Rotate** to Quick Actions or a button shortcut. It comes back on in the mode it was in before, with an **Auto-Rotate: ON/OFF** notice. Whenever it comes back on, or after Quick Lock is unlocked, it checks how you're holding the reader and turns the page to match. If a sideways turn ever comes out upside down, use **Rotate Page 180°** within 20 seconds and it remembers the correction. Turn on **Orientation Aware** for the buttons in **Settings > Controls** so page turns follow the rotated screen.
 
 ### Stay Awake When Plugged In
 
@@ -50,7 +54,7 @@ It starts working as soon as a book opens or the reader wakes up. It ignores the
 
 ### Where to find the new features
 
-In a book, press Confirm to open the reader menu. Its tabs are icons; Zoom Image and Search Book are on the **⋯ (three dots)** tab, next to Look Up Word. You can also add them to **Settings > Controls > Quick Actions**, or assign them to a button under **Settings > Controls > Power Button**, **Front Buttons**, or **Side Buttons**.
+In a book, press Confirm to open the reader menu. Its tabs are icons; Zoom Image and Search Book are on the **⋯ (three dots)** tab, next to Look Up Word. You can also add them (and the Auto-Rotate on/off switch) to **Settings > Controls > Quick Actions**, or assign them to a button under **Settings > Controls > Power Button**, **Front Buttons**, or **Side Buttons**.
 
 See [Reader Features](./docs/reader-features.md) for the full details.
 
@@ -60,6 +64,8 @@ See [Reader Features](./docs/reader-features.md) for the full details.
 
 1. Download **`firmware-x3-x4.bin`** from the latest release on the [Releases page](../../releases/latest).
 2. Connect the reader to your computer with a USB cable and flash the file with Inky, CrossInk's web flasher: https://inky.crossink.dev/#flash-tools (choose the custom `.bin` option).
+
+Already on CrossMoe 1.0.1 or later? Use **Settings > System > Check for Updates** instead. (1.0 has to be flashed as above.)
 
 Development builds of newer changes are made by GitHub Actions each time the `release/zoom-search` branch changes: open the [Actions tab](../../actions/workflows/release_candidate.yml), pick the newest green run, and download **firmware-x3-x4** under **Artifacts** (sign-in required; artifacts expire after 90 days).
 
