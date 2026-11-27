@@ -46,11 +46,7 @@ It starts working as soon as a book opens or the reader wakes up. It ignores the
 
 ### Stay Awake When Plugged In
 
-**Settings > System > Device > Stay Awake When Plugged In** stops the reader from going to sleep on its own while it's on USB power, which is handy while copying books or flashing firmware. The **Time to Sleep** timer starts over when you unplug. The X3 can only tell it's plugged in while the battery is charging, so on a charger with a full battery it may still go to sleep.
-
-### Adobe DRM activation fix
-
-On the X3/X4, CrossInk v2.0.0 can't activate an Adobe ID for Libby and other `.acsm` books; activation fails with `pkcs12 rc=-133`. CrossMoe enables the RC2 cipher that Adobe's activation files need, so activation works.
+**Settings > System > Device > Stay Awake When Plugged In** stops the reader from going to sleep on its own while it's on USB power, which is handy while copying books or flashing firmware. The **Time to Sleep** timer starts over when you unplug. On the X3 it counts as plugged in while the battery is charging or while it's connected to a computer, so only a wall charger with a full battery may still let it sleep.
 
 ### Where to find the new features
 
