@@ -253,8 +253,9 @@ like looking up a character in an X-Ray panel. Open it from the Reader Menu's
 2. Move to a word and press **Confirm**, or hold **Confirm** to select a
    phrase across several words, then press **Confirm** again.
 3. A progress bar fills while every chapter is searched. Hold **Back** to stop.
-4. The results list shows each match with a little of the surrounding text,
-   its chapter, and its position in the book. Choose one to jump there.
+4. The results list shows each match with a few words before and after it
+   (over two lines when needed, so the word always shows), its chapter, and
+   its position in the book. Choose one to jump there.
 5. On that page the match is boxed (only that one, even if the words appear
    more than once on the page) and a counter such as **3/17** shows in the
    top-right corner. **Left** and **Right** jump to the previous and next match
@@ -262,8 +263,9 @@ like looking up a character in an X-Ray panel. Open it from the Reader Menu's
    the hints show, the status bar is hidden; press **Confirm** (**Hide**) to
    hide the hints and see the status bar, and **Confirm** again to bring them
    back.
-6. Press **Back** (shown as **Done**) to clear the highlight and keep reading
-   from there.
+6. Press **Back** to return to the results list and pick another passage.
+   Press **Back** again on the list to leave the search and return to the page
+   you started from.
 
 Matching ignores letter case and only matches whole words, so searching
 "Vin" finds "Vin" and "Vin's" but not "Vindication". The first 200 matches are

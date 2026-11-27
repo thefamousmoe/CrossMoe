@@ -6239,8 +6239,28 @@ void EpubReaderActivity::openBookSearch(const std::string& text) {
     requestUpdate();
     return;
   }
+  // A new search started while reading matches keeps the original starting
+  // page, so Back still leads all the way back to it.
+  const bool alreadyAway = searchHighlightActive && searchOrigin.valid;
+  if (!alreadyAway) captureSearchOrigin();
   searchSelection.hits.clear();
+  searchSelection.releaseList();
   searchSelection.selected = -1;
+  startBookSearchActivity(text, alreadyAway);
+}
+
+void EpubReaderActivity::openSearchResultsList() {
+  if (searchSelection.listHits.empty()) {
+    // No list kept (should not happen): go straight back to the starting page.
+    returnToSearchOrigin();
+    endSearchMode();
+    requestUpdate();
+    return;
+  }
+  startBookSearchActivity(searchText, /*returnToOriginOnCancel=*/true);
+}
+
+void EpubReaderActivity::startBookSearchActivity(const std::string& text, const bool returnToOriginOnCancel) {
   auto search = makeUniqueNoThrow<BookSearchActivity>(renderer, mappedInput, epub, text, &searchSelection);
   if (!search) {
     LOG_ERR("ERS", "OOM: book search activity");
@@ -6250,16 +6270,71 @@ void EpubReaderActivity::openBookSearch(const std::string& text) {
     return;
   }
   pauseReadingPaceTimer("book_search");
-  startActivityForResult(std::move(search), [this, text](const ActivityResult& result) {
+  startActivityForResult(std::move(search), [this, text, returnToOriginOnCancel](const ActivityResult& result) {
     if (!result.isCancelled) {
       if (const auto* match = std::get_if<BookmarkResult>(&result.data)) {
         jumpToSearchResult(*match, text);
         return;
       }
     }
+    // Back from the results list: leave search, back on the starting page.
+    if (returnToOriginOnCancel) returnToSearchOrigin();
+    endSearchMode();
     resumeReadingPaceTimer("book_search_cancel");
     requestUpdate();
   });
+}
+
+void EpubReaderActivity::captureSearchOrigin() {
+  searchOrigin = SearchOrigin{};
+  if (!section || section->pageCount == 0) return;
+  const int pageCount = section->estimatedTotalPages();
+  if (pageCount <= 0) return;
+  searchOrigin.valid = true;
+  searchOrigin.spineIndex = currentSpineIndex;
+  searchOrigin.page = section->currentPage;
+  searchOrigin.pageCount = pageCount;
+  searchOrigin.progress = static_cast<float>(section->currentPage) / static_cast<float>(pageCount);
+  if (const auto paragraph = section->getParagraphIndexForPage(static_cast<uint16_t>(section->currentPage))) {
+    searchOrigin.paragraphIndex = *paragraph;
+  }
+  searchOrigin.orientation = SETTINGS.orientation;
+}
+
+void EpubReaderActivity::returnToSearchOrigin() {
+  if (!searchOrigin.valid) return;
+  const SearchOrigin origin = searchOrigin;
+  {
+    RenderLock lock(*this);
+    clearPendingManualPageTurns();
+    clearFootnotePreviewState();
+    pendingAnchor.clear();
+    pendingSearchText.clear();
+    // Same layout as when the search started (orientation unchanged): the
+    // exact page. Otherwise find the spot again the way a bookmark does.
+    const bool sameLayout = origin.orientation == SETTINGS.orientation;
+    if (section && currentSpineIndex == origin.spineIndex && sameLayout &&
+        section->estimatedTotalPages() == origin.pageCount) {
+      section->currentPage = origin.page;
+      nextPageNumber = origin.page;
+      pendingPercentJump = false;
+      pendingParagraphIndex = UINT16_MAX;
+    } else if (sameLayout) {
+      currentSpineIndex = origin.spineIndex;
+      nextPageNumber = origin.page;
+      pendingPercentJump = false;
+      pendingParagraphIndex = UINT16_MAX;
+      section.reset();
+    } else {
+      currentSpineIndex = origin.spineIndex;
+      pendingSpineProgress = origin.progress;
+      pendingParagraphIndex = origin.paragraphIndex;
+      pendingPercentJump = true;
+      section.reset();
+    }
+  }
+  LOG_INF("ERS", "Search: back to the starting page (spine %d page %d)", origin.spineIndex, origin.page);
+  armReadingPaceWarmup("search_return");
 }
 
 void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match, const std::string& text) {
@@ -6327,22 +6402,23 @@ void EpubReaderActivity::jumpToSearchHit(const int index) {
 }
 
 void EpubReaderActivity::endSearchMode() {
-  if (!searchHighlightActive && searchSelection.hits.empty()) return;
+  searchOrigin.valid = false;
+  if (!searchHighlightActive && searchSelection.hits.empty() && searchSelection.listHits.empty()) return;
   searchHighlightActive = false;
   searchHintsHidden = false;
   searchTokens.clear();
   searchText.clear();
   // Release the match list's heap; it is rebuilt by the next search.
   std::vector<BookSearchHitRef>().swap(searchSelection.hits);
+  searchSelection.releaseList();
   searchSelection.selected = -1;
 }
 
 bool EpubReaderActivity::handleSearchModeInput(const bool backReleased) {
   if (!searchHighlightActive) return false;
   if (backReleased && mappedInput.getHeldTime() < ReaderUtils::GO_HOME_MS) {
-    // Back leaves the highlight and keeps reading here.
-    endSearchMode();
-    requestUpdate();
+    // Back shows the results list again; Back there returns to the starting page.
+    openSearchResultsList();
     return true;
   }
   const bool previous = mappedInput.wasReleased(MappedInputManager::Button::Left);
@@ -6439,8 +6515,8 @@ void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId
   // What the buttons do while a match is showing (see handleSearchModeInput()).
   // Hidden with Confirm so the status bar can show; Confirm shows them again.
   if (searchHintsHidden) return;
-  const auto labels =
-      mappedInput.mapLabels(tr(STR_DONE), tr(STR_HIDE), tr(STR_SEARCH_PREV_MATCH), tr(STR_SEARCH_NEXT_MATCH));
+  const auto labels = mappedInput.mapLabels(mappedInput.withBackArrow(tr(STR_BACK)), tr(STR_HIDE),
+                                            tr(STR_SEARCH_PREV_MATCH), tr(STR_SEARCH_NEXT_MATCH));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 

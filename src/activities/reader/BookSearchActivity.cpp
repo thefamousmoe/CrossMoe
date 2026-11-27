@@ -49,6 +49,10 @@ void BookSearchActivity::onEnter() {
   app.on(ACTION_ROW, &BookSearchActivity::onRowEvent, this);
   app.setScreen(&BookSearchActivity::listScreen, this);
 
+  if (selectionOut && !selectionOut->listHits.empty()) {
+    restoreList();
+    return;
+  }
   if (!epub || !scanner.setQuery(query)) {
     state = State::Failed;
     requestUpdate();
@@ -62,6 +66,22 @@ void BookSearchActivity::onEnter() {
 }
 
 void BookSearchActivity::onExit() { Activity::onExit(); }
+
+void BookSearchActivity::restoreList() {
+  // Take the list back from the reader; it is handed over again on the next pick.
+  scanner.hits = std::move(selectionOut->listHits);
+  chapterNames = std::move(selectionOut->listChapters);
+  selectionOut->releaseList();
+  const int total = static_cast<int>(scanner.hits.size());
+  snprintf(headerSubtitle, sizeof(headerSubtitle), scanner.limitReached() ? "%u+ %s" : "%u %s",
+           static_cast<unsigned>(total), tr(STR_SEARCH_MATCHES));
+  selectedIndex = std::clamp(selectionOut->selected, 0, total - 1);
+  topIndex = selectedIndex;  // clamped to the visible range when the list is built
+  LOG_INF("SRCH", "Showing %d matches for \"%s\" again", total, query.c_str());
+  popupShown = true;  // replacing a reader page: half refresh to clear its ghost
+  state = State::Results;
+  requestUpdate();
+}
 
 void BookSearchActivity::cancel() {
   ActivityResult result;
@@ -118,7 +138,7 @@ void BookSearchActivity::searchNextChapter() {
     // Resolve the chapter name and book position once, here, rather than while drawing rows.
     const int tocIndex = epub->getTocIndexForSpineIndex(nextSpine);
     chapterNames.push_back(
-        ChapterName{static_cast<uint16_t>(nextSpine), tocIndex >= 0 ? epub->getTocItem(tocIndex).title : ""});
+        BookSearchChapterName{static_cast<uint16_t>(nextSpine), tocIndex >= 0 ? epub->getTocItem(tocIndex).title : ""});
     for (size_t i = hitsBefore; i < scanner.hits.size(); ++i) {
       auto& hit = scanner.hits[i];
       const float book = epub->calculateProgress(nextSpine, hit.chapterProgress);
@@ -144,6 +164,7 @@ void BookSearchActivity::finishSearch() {
 void BookSearchActivity::selectResult() {
   if (selectedIndex < 0 || selectedIndex >= static_cast<int>(scanner.hits.size())) return;
   const auto& hit = scanner.hits[static_cast<size_t>(selectedIndex)];
+  const BookmarkResult picked{hit.spineIndex, hit.chapterProgress, hit.paragraphIndex};
   if (selectionOut) {
     // At most MAX_HITS (200) entries of 16 bytes, so ~3.2 KB for previous/next stepping.
     selectionOut->hits.clear();
@@ -157,8 +178,11 @@ void BookSearchActivity::selectResult() {
       selectionOut->hits.push_back(ref);
     }
     selectionOut->selected = selectedIndex;
+    // Hand the list to the reader so Back from a match can show it again.
+    selectionOut->listHits = std::move(scanner.hits);
+    selectionOut->listChapters = std::move(chapterNames);
   }
-  setResult(BookmarkResult{hit.spineIndex, hit.chapterProgress, hit.paragraphIndex});
+  setResult(picked);
   finish();
 }
 
@@ -275,6 +299,17 @@ void BookSearchActivity::buildListScreen(UiApp::ScreenType& screen) {
   props.action = ACTION_ROW;
   props.inputMask = static_cast<uint16_t>(fui::InputTouch);
   props.valueInset = 8;
+  // The passage may take two lines so the searched word always shows, with
+  // the chapter name below. Every row gets the same height so the visible-row
+  // count used for scrolling stays exact.
+  props.labelText = screen.theme().bodyText;
+  props.labelText.maxLines = 2;
+  props.subtitleText = screen.theme().smallText;
+  const int16_t labelLine = uiTarget.lineHeight(props.labelText.font);
+  const int16_t subtitleLine = uiTarget.lineHeight(props.subtitleText.font);
+  const int16_t oneLineRow = uiListRowHeight(screen.theme(), UiListRowType::WithSubtitle);
+  props.rowPaddingY = static_cast<int16_t>(std::max(2, (oneLineRow - labelLine - subtitleLine) / 2));
+  props.rowHeight = static_cast<int16_t>(labelLine * 2 + subtitleLine + props.rowPaddingY * 2);
   const fui::Rect bounds = screen.body();
   const auto rows = configureUiList(props, screen.theme(), bounds, UiListRowType::WithSubtitle);
   visibleRows = rows > 0 ? rows : 1;

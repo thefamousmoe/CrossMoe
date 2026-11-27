@@ -292,8 +292,19 @@ class EpubReaderActivity final : public Activity {
   std::vector<std::string> searchTokens;
   std::string searchText;
   bool searchHighlightActive = false;
-  // Confirm hides the Done/Prev/Next hints so the status bar shows again.
+  // Confirm hides the Back/Prev/Next hints so the status bar shows again.
   bool searchHintsHidden = false;
+  // Where the reader was when the search started. Back from a match reopens
+  // the results list; Back from that list returns here.
+  struct SearchOrigin {
+    bool valid = false;
+    int spineIndex = 0;
+    int page = 0;
+    int pageCount = 0;
+    float progress = 0.0f;
+    uint16_t paragraphIndex = UINT16_MAX;
+    uint8_t orientation = 0;
+  } searchOrigin;
   unsigned long searchJumpMs = 0;
   ReaderDrawerState touchReaderDrawerState{};
 #if CROSSINK_APP_CAP_TOUCH
@@ -567,6 +578,10 @@ class EpubReaderActivity final : public Activity {
                       bool autoLookupInitialWord = false, bool searchMode = false);
   // Search the whole book for text picked on the page, then jump to a match.
   void openBookSearch(const std::string& text);
+  void openSearchResultsList();
+  void startBookSearchActivity(const std::string& text, bool returnToOriginOnCancel);
+  void captureSearchOrigin();
+  void returnToSearchOrigin();
   void jumpToSearchResult(const BookmarkResult& match, const std::string& text);
   void jumpToSearchHit(int index);
   bool handleSearchModeInput(bool backReleased);

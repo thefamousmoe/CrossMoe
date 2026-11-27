@@ -19,7 +19,10 @@ class Epub;
 
 // Searches every chapter for one word, showing a progress bar, then lists the
 // matches. Choosing one returns a BookmarkResult the reader jumps to, and
-// fills `selectionOut` (if given) with all matches for previous/next stepping.
+// fills `selectionOut` (if given) with all matches for previous/next stepping
+// plus the list itself. If `selectionOut` already holds a list when this opens,
+// that list is shown again (selection on `selectionOut->selected`) without
+// searching.
 class BookSearchActivity final : public Activity {
  public:
   BookSearchActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::shared_ptr<Epub> epub,
@@ -36,6 +39,7 @@ class BookSearchActivity final : public Activity {
  private:
   enum class State : uint8_t { Searching, Results, Failed };
 
+  void restoreList();
   void searchNextChapter();
   void drawProgress(bool force);
   void finishSearch();
@@ -61,11 +65,7 @@ class BookSearchActivity final : public Activity {
   int lastDrawnPercent = -1;
   uint32_t lastDrawMs = 0;
 
-  struct ChapterName {
-    uint16_t spineIndex;
-    std::string title;
-  };
-  std::vector<ChapterName> chapterNames;
+  std::vector<BookSearchChapterName> chapterNames;
   char rowValue[8] = {};
   char headerSubtitle[40] = {};
 
