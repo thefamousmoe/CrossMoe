@@ -153,7 +153,8 @@ int poll(const uint8_t currentOrientation) {
   // check how it is held now, as when a book opens, instead of assuming the
   // page already matches.
   if (previousMode == CrossPointSettings::AUTO_ROTATE_OFF) {
-    LOG_INF("ROT", "Auto-rotate back on: checking how the reader is held");
+    LOG_INF("ROT", "Auto-rotate back on: checking how the reader is held (mirrored=%d offset=%u)",
+            state.mirrored ? 1 : 0, state.offset);
     state.checkOpenPosition = true;
     state.trustPairing = false;
     state.lastAutoWasSideways = false;
