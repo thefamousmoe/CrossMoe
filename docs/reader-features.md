@@ -259,8 +259,9 @@ like looking up a character in an X-Ray panel. Open it from the Reader Menu's
 5. On that page the match is boxed (only that one, even if the words appear
    more than once on the page). Which match this is (for example **4/17**)
    shows after the **Next** button. In portrait the buttons cover the bottom
-   status bar, so it moves to the top of the page and the text moves down to
-   make room; in landscape the buttons sit at the side and the status bars
+   status bar, so it moves to the top of the page. Only the lines that fit
+   between it and the buttons are shown (always including the match); the
+   rest come back when the search ends; in landscape the buttons sit at the side and the status bars
    stay where they are. Upside down, the top status bar is left out because
    the buttons are there. **Left** and **Right** (**Prev** and **Next**) jump
    to the previous and next match anywhere in the book.

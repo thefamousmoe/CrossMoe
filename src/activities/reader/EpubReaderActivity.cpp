@@ -6439,36 +6439,10 @@ void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId
                                               const int orientedMarginLeft) const {
   if (!searchHighlightActive || searchTokens.empty() || renderer.getRenderMode() != GfxRenderer::BW) return;
 
-  SearchPageWords words;
-  collectSearchPageWords(page, words);
-  // Box only the selected result, not every match on the page: pick the match
-  // whose neighboring words agree best with that result (ties go to the first
-  // on the page). Next/Prev then step to the other matches here.
-  SearchPageSummary current;
-  current.hashes.reserve(words.words.size());
-  for (const auto& word : words.words) current.hashes.push_back(SearchText::wordHash(word));
-  const SearchPageSummary none;
-  const bool hasSelected =
-      searchSelection.selected >= 0 && searchSelection.selected < static_cast<int>(searchSelection.hits.size());
-  int bestScore = -1;
-  size_t bestStart = 0;
-  forEachSearchMatch(words.words, searchTokens, [&](const size_t start) {
-    const int score =
-        hasSelected ? searchContextScore(none, current, none, start, searchTokens.size(),
-                                         searchSelection.hits[static_cast<size_t>(searchSelection.selected)].context)
-                    : 0;
-    if (score > bestScore) {
-      bestScore = score;
-      bestStart = start;
-    }
-    return true;
-  });
   // Page words to box, as [first, last] page word index ranges.
   std::array<std::pair<uint16_t, uint16_t>, 1> ranges{};
   size_t rangeCount = 0;
-  if (bestScore >= 0) {
-    ranges[rangeCount++] = {words.firstPageWord[bestStart], words.lastPageWord[bestStart + searchTokens.size() - 1]};
-  }
+  if (selectedSearchMatchWords(page, ranges[0])) rangeCount = 1;
 
   if (rangeCount > 0) {
     forEachVisiblePageWord(page, [&](const uint16_t pageWordIndex, const PageTextLine& line, const TextBlock& block,
@@ -6502,24 +6476,144 @@ void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId
   // What the buttons do while a match is showing (see handleSearchModeInput()).
   const auto labels = mappedInput.mapLabels(mappedInput.withBackArrow(tr(STR_BACK)), tr(STR_STAY),
                                             tr(STR_SEARCH_PREV_MATCH), tr(STR_SEARCH_NEXT_MATCH));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
-  // Which match this is, e.g. "4/17", after the last hint.
+  // Which match this is, e.g. "4/17", right after the Next hint.
   char counter[16];
   snprintf(counter, sizeof(counter), "%d/%u", searchSelection.selected + 1,
            static_cast<unsigned>(searchSelection.hits.size()));
-  GUI.drawButtonHintsCaption(renderer, counter);
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4, false, counter);
 }
 
-int EpubReaderActivity::searchStatusBarShift(const int layoutMarginTop) const {
-  // Portrait search: the hints cover the bottom bar, so it is drawn at the top
-  // (renderStatusBar()) and the page moves down far enough to clear it.
-  if (!searchHighlightActive || !statusBarVisible || SETTINGS.orientation != CrossPointSettings::PORTRAIT) return 0;
+bool EpubReaderActivity::selectedSearchMatchWords(const Page& page, std::pair<uint16_t, uint16_t>& range) const {
+  if (searchTokens.empty()) return false;
+  SearchPageWords words;
+  collectSearchPageWords(page, words);
+  // Box only the selected result, not every match on the page: pick the match
+  // whose neighboring words agree best with that result (ties go to the first
+  // on the page). Next/Prev then step to the other matches here.
+  SearchPageSummary current;
+  current.hashes.reserve(words.words.size());
+  for (const auto& word : words.words) current.hashes.push_back(SearchText::wordHash(word));
+  const SearchPageSummary none;
+  const bool hasSelected =
+      searchSelection.selected >= 0 && searchSelection.selected < static_cast<int>(searchSelection.hits.size());
+  int bestScore = -1;
+  size_t bestStart = 0;
+  forEachSearchMatch(words.words, searchTokens, [&](const size_t start) {
+    const int score =
+        hasSelected ? searchContextScore(none, current, none, start, searchTokens.size(),
+                                         searchSelection.hits[static_cast<size_t>(searchSelection.selected)].context)
+                    : 0;
+    if (score > bestScore) {
+      bestScore = score;
+      bestStart = start;
+    }
+    return true;
+  });
+  if (bestScore < 0) return false;
+  range = {words.firstPageWord[bestStart], words.lastPageWord[bestStart + searchTokens.size() - 1]};
+  return true;
+}
+
+bool EpubReaderActivity::searchMatchBand(const Page& page, const int fontId, int& top, int& bottom) const {
+  std::pair<uint16_t, uint16_t> range;
+  if (!selectedSearchMatchWords(page, range)) return false;
+  top = INT_MAX;
+  bottom = INT_MIN;
+  forEachVisiblePageWord(page,
+                         [&](const uint16_t pageWordIndex, const PageTextLine& line, const TextBlock& block, size_t) {
+                           if (pageWordIndex < range.first || pageWordIndex > range.second) return true;
+                           top = std::min(top, static_cast<int>(line.yPos));
+                           bottom = std::max(bottom, line.yPos + block.maxLineHeight(renderer, fontId));
+                           return true;
+                         });
+  return top <= bottom;
+}
+
+int EpubReaderActivity::fitSearchPageWindow(Page& page, const int fontId, const int layoutMarginTop) const {
+  // Portrait search only: the hints cover the page bottom and the bottom
+  // status bar is drawn at the top (renderStatusBar()). Show only the lines
+  // that fit wholly between the two, with space on each side, keeping the
+  // match among them. The page keeps its layout; its other lines are simply
+  // not drawn until the search ends.
+  if (!searchHighlightActive || SETTINGS.orientation != CrossPointSettings::PORTRAIT || page.elements.empty()) {
+    return layoutMarginTop;
+  }
+  constexpr int gap = 8;
+  int windowTop = layoutMarginTop;
   const auto bottomBar = SETTINGS.readerStatusBar(ReaderStatusBarPosition::Bottom);
-  if (bottomBar.hidden) return 0;
-  const int barHeight = UITheme::getReaderStatusBarHeight(ReaderStatusBarPosition::Top, renderer, &bottomBar);
-  if (barHeight <= 0) return 0;
-  constexpr int gap = 6;
-  return std::max(0, UITheme::getTopStatusBarY(renderer) + barHeight + gap - layoutMarginTop);
+  if (statusBarVisible && !bottomBar.hidden) {
+    const int barHeight = UITheme::getReaderStatusBarHeight(ReaderStatusBarPosition::Top, renderer, &bottomBar);
+    if (barHeight > 0) windowTop = std::max(windowTop, UITheme::getTopStatusBarY(renderer) + barHeight + gap);
+  }
+  const int windowBottom = renderer.getScreenHeight() - UITheme::getButtonHintsReserve(renderer) - gap;
+
+  // An element's vertical extent, relative to the page top.
+  const auto extent = [&](const PageElement& element, int& top, int& bottom) {
+    top = element.yPos;
+    bottom = element.yPos;
+    switch (element.getTag()) {
+      case TAG_PageLine: {
+        const auto& block = static_cast<const PageLine&>(element).getBlock();
+        if (block) bottom += block->maxLineHeight(renderer, fontId);
+        break;
+      }
+      case TAG_PageImage:
+        bottom += static_cast<const PageImage&>(element).getImageBlock().getHeight();
+        break;
+      case TAG_PageTableFragment:
+        bottom += static_cast<const PageTableFragment&>(element).getHeight();
+        break;
+      default:
+        break;
+    }
+  };
+
+  int contentTop = INT_MAX;
+  for (const auto& element : page.elements) {
+    int top = 0, bottom = 0;
+    extent(*element, top, bottom);
+    contentTop = std::min(contentTop, top);
+  }
+  int pageTop = std::max(layoutMarginTop, windowTop - contentTop);
+  int matchTop = 0, matchBottom = 0;
+  if (searchMatchBand(page, fontId, matchTop, matchBottom)) {
+    if (pageTop + matchBottom > windowBottom) pageTop = windowBottom - matchBottom;
+    if (pageTop + matchTop < windowTop) pageTop = windowTop - matchTop;
+  }
+
+  // Text that does not fit moves far off-screen (drawing there is clipped), so
+  // page word numbering, and with it the boxed match, stays the same. Images,
+  // rules and borders outside the window, which have no words, are dropped.
+  constexpr int16_t OFF_SCREEN_Y = -30000;
+  int hidden = 0;
+  auto& elements = page.elements;
+  for (auto it = elements.begin(); it != elements.end();) {
+    int top = 0, bottom = 0;
+    extent(**it, top, bottom);
+    const bool fits = pageTop + top >= windowTop && pageTop + bottom <= windowBottom;
+    if (fits) {
+      ++it;
+      continue;
+    }
+    ++hidden;
+    const PageElementTag tag = (*it)->getTag();
+    if (tag == TAG_PageLine || tag == TAG_PageTableFragment || tag == TAG_PageDropCap) {
+      (*it)->yPos = OFF_SCREEN_Y;
+      ++it;
+    } else {
+      it = elements.erase(it);
+    }
+  }
+  if (hidden > 0) {
+    // A border or shade may span hidden lines; leave them all out while searching.
+    elements.erase(std::remove_if(elements.begin(), elements.end(),
+                                  [](const std::unique_ptr<PageElement>& element) {
+                                    return element->getTag() == TAG_PageBorderBox;
+                                  }),
+                   elements.end());
+    LOG_DBG("ERS", "Search window: %d page item(s) not drawn", hidden);
+  }
+  return pageTop;
 }
 
 void EpubReaderActivity::openFootnoteSelect(const bool returnToReaderMenu) {
@@ -8584,8 +8678,9 @@ void EpubReaderActivity::prepareCurrentSectionForRelayout(const bool preserveSta
 bool EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int fontId, const int layoutMarginTop,
                                         const int orientedMarginRight, const int orientedMarginBottom,
                                         const int orientedMarginLeft, const bool updatePanel) {
-  // Drawn lower (not laid out again) while the status bar sits at the top for a search.
-  const int orientedMarginTop = layoutMarginTop + searchStatusBarShift(layoutMarginTop);
+  // While searching in portrait, only lines that fit between the status bar
+  // (moved to the top) and the button hints are drawn (not laid out again).
+  const int orientedMarginTop = page ? fitSearchPageWindow(*page, fontId, layoutMarginTop) : layoutMarginTop;
   const GfxRenderer::TextDarknessScope darkness(renderer, SETTINGS.textDarkness);
 #if defined(ENABLE_SERIAL_LOG) && LOG_LEVEL >= 2
   // Log after presentation so serial output does not delay the first pixels.
@@ -9220,7 +9315,7 @@ void EpubReaderActivity::renderStatusBar() const {
   }
   // While a search match is showing, the Back/Stay/Prev/Next hints sit along
   // the front-button edge: the page bottom in portrait, so the bottom bar is
-  // drawn at the top instead (the page moves down, see searchStatusBarShift());
+  // drawn at the top instead (see fitSearchPageWindow());
   // the page top upside down, so the top bar is left out; the side in
   // landscape, where both bars still fit.
   const bool searchPortrait = searchHighlightActive && SETTINGS.orientation == CrossPointSettings::PORTRAIT;

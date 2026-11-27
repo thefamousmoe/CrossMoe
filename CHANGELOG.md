@@ -15,7 +15,7 @@
 - Auto-Rotate can be switched on and off from Quick Actions or any button shortcut while reading an EPUB or TXT book. It comes back on in the mode it was in before, with an "Auto-Rotate: ON/OFF" notice. Only offered on readers with a motion sensor, such as the X3.
 - Stay Awake When Plugged In in `Settings > System > Device` keeps the reader from going to sleep on its own while it is on USB power. The sleep timer starts over when you unplug.
 - Zoom Image shows button hints while zoomed in: Out, In, Left, and Right on the front buttons, and Up and Down beside the side buttons.
-- Search Book lands on the page showing the chosen match, recognized by the words around it. After a jump the match is boxed and the match number shows after the Next button. In portrait the bottom status bar moves to the top of the page (the text moves down to make room) while the search buttons show; in landscape both bars stay. Left/Right step to the previous/next match. Back returns to the results list (Back again returns to the page the search started from), and Confirm (Stay) ends the search and keeps reading on that page.
+- Search Book lands on the page showing the chosen match, recognized by the words around it. After a jump the match is boxed and the match number shows after the Next button. In portrait the bottom status bar moves to the top of the page while the search buttons show, and only the lines that fit between the bar and the buttons are drawn, always including the match; in landscape both bars stay. Left/Right step to the previous/next match. Back returns to the results list (Back again returns to the page the search started from), and Confirm (Stay) ends the search and keeps reading on that page.
 
 ### Fixed
 

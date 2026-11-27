@@ -159,7 +159,7 @@ void BaseTheme::drawProgressBar(const GfxRenderer& renderer, Rect rect, const si
 }
 
 void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
-                                const char* btn4, const bool allowInvertedText) const {
+                                const char* btn4, const bool allowInvertedText, const char* trailingCaption) const {
   if (gpio.hasTouch()) return;
 
   const GfxRenderer::Orientation orig_orientation = renderer.getOrientation();
@@ -178,15 +178,43 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   constexpr int wideButtonPositions[] = {38, 154, 268, 384};
   const int* buttonPositions = renderer.getScreenWidth() >= 528 ? wideButtonPositions : narrowButtonPositions;
   const char* labels[] = {btn1, btn2, btn3, btn4};
+  int widths[] = {buttonWidth, buttonWidth, buttonWidth, buttonWidth};
+
+  // Optional short text (such as a match count) right after the last box.
+  // When it does not fit there, the small font is tried, then the last box
+  // gives up width (never below its own label plus padding).
+  const bool hasCaption = trailingCaption != nullptr && trailingCaption[0] != '\0';
+  int captionFont = UI_10_FONT_ID;
+  int captionWidth = 0;
+  if (hasCaption) {
+    const auto edges = renderer.getViewableInsets().rotated(static_cast<unsigned>(renderer.getOrientation())).edges;
+    const int lastRight = UITheme::getHintSafeX(renderer, buttonPositions[3], buttonWidth) + buttonWidth;
+    const int room = renderer.getScreenWidth() - static_cast<int>(edges[1]) - lastRight - 8;
+    captionWidth = renderer.getTextWidth(captionFont, trailingCaption);
+    if (captionWidth > room) {
+      captionFont = SMALL_FONT_ID;
+      captionWidth = renderer.getTextWidth(captionFont, trailingCaption);
+    }
+    if (captionWidth > room) {
+      const int labelWidth = labels[3] ? renderer.getTextWidth(UI_10_FONT_ID, labels[3]) : 0;
+      widths[3] = std::max(labelWidth + 12, buttonWidth - (captionWidth - room));
+    }
+  }
 
   for (int i = 0; i < 4; i++) {
     const int x = UITheme::getHintSafeX(renderer, buttonPositions[i], buttonWidth);
     if (labels[i] != nullptr && labels[i][0] != '\0') {
-      TouchRegistry::getInstance().add(Rect{x, pageHeight - buttonY, buttonWidth, buttonHeight}, i,
+      TouchRegistry::getInstance().add(Rect{x, pageHeight - buttonY, widths[i], buttonHeight}, i,
                                        TouchRegistry::Button);
-      renderer.fillRect(x, pageHeight - buttonY, buttonWidth, buttonHeight, false);
-      renderer.drawRect(x, pageHeight - buttonY, buttonWidth, buttonHeight);
+      renderer.fillRect(x, pageHeight - buttonY, widths[i], buttonHeight, false);
+      renderer.drawRect(x, pageHeight - buttonY, widths[i], buttonHeight);
     }
+  }
+  if (hasCaption) {
+    const int x = UITheme::getHintSafeX(renderer, buttonPositions[3], buttonWidth) + widths[3] + 4;
+    const int y = pageHeight - buttonY + std::max(1, (buttonHeight - renderer.getTextHeight(captionFont)) / 2);
+    renderer.fillRect(x - 2, pageHeight - buttonY, captionWidth + 4, buttonHeight, false);
+    renderer.drawText(captionFont, x, y, trailingCaption);
   }
 
   renderer.setOrientation(invertText ? GfxRenderer::Orientation::PortraitInverted : GfxRenderer::Orientation::Portrait);
@@ -196,45 +224,13 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   for (int i = 0; i < 4; i++) {
     if (labels[i] != nullptr && labels[i][0] != '\0') {
       const int x = buttonPositions[invertText ? 3 - i : i];
+      const int boxWidth = widths[invertText ? 3 - i : i];
       const int textWidth = renderer.getTextWidth(UI_10_FONT_ID, labels[i]);
-      const int textX = UITheme::getHintSafeX(renderer, x + (buttonWidth - 1 - textWidth) / 2, textWidth);
+      const int textX = UITheme::getHintSafeX(renderer, x + (boxWidth - 1 - textWidth) / 2, textWidth);
       renderer.drawText(UI_10_FONT_ID, textX, textY, labels[i]);
     }
   }
 
-  renderer.setOrientation(orig_orientation);
-}
-
-void BaseTheme::drawButtonHintsCaption(GfxRenderer& renderer, const char* text) const {
-  if (gpio.hasTouch() || text == nullptr || text[0] == '\0') return;
-
-  const GfxRenderer::Orientation orig_orientation = renderer.getOrientation();
-  renderer.setOrientation(GfxRenderer::Orientation::Portrait);
-  const int pageWidth = renderer.getScreenWidth();
-  const int pageHeight = renderer.getScreenHeight();
-  // Same geometry as drawButtonHints().
-  constexpr int buttonWidth = 106;
-  constexpr int buttonHeight = BaseMetrics::values.buttonHintsHeight;
-  const int buttonY = BaseMetrics::values.buttonHintsHeight + UITheme::getButtonHintsBottomInset(renderer);
-  const int lastX = pageWidth >= 528 ? 384 : 350;
-  const int gapLeft = UITheme::getHintSafeX(renderer, lastX, buttonWidth) + buttonWidth + 3;
-  const int gapWidth = std::max(0, pageWidth - gapLeft - 2);
-
-  int fontId = UI_10_FONT_ID;
-  int textWidth = renderer.getTextWidth(fontId, text);
-  if (textWidth > gapWidth) {
-    fontId = SMALL_FONT_ID;
-    textWidth = renderer.getTextWidth(fontId, text);
-  }
-  int x = gapLeft + std::max(0, (gapWidth - textWidth) / 2);
-  int y = pageHeight - buttonY + std::max(1, (buttonHeight - renderer.getTextHeight(fontId)) / 2);
-  if (textWidth > gapWidth) {
-    // Still too wide: sit just above the last hint box instead.
-    x = UITheme::getHintSafeX(renderer, gapLeft - 3 - textWidth, textWidth);
-    y = pageHeight - buttonY - renderer.getLineHeight(fontId) - 2;
-  }
-  renderer.fillRect(x - 1, y, textWidth + 2, renderer.getLineHeight(fontId), false);
-  renderer.drawText(fontId, x, y, text);
   renderer.setOrientation(orig_orientation);
 }
 

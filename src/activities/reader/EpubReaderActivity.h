@@ -449,7 +449,9 @@ class EpubReaderActivity final : public Activity {
   void releaseGrayscaleStripScratch(bool force = false);
   void drawClippingHighlights(const Page& page, int fontId, int orientedMarginTop, int orientedMarginLeft) const;
   void renderStatusBar() const;
-  int searchStatusBarShift(int layoutMarginTop) const;
+  int fitSearchPageWindow(Page& page, int fontId, int layoutMarginTop) const;
+  bool selectedSearchMatchWords(const Page& page, std::pair<uint16_t, uint16_t>& range) const;
+  bool searchMatchBand(const Page& page, int fontId, int& top, int& bottom) const;
   void refreshChapterGroupEstimate(uint16_t viewportWidth, uint16_t viewportHeight);
   bool resolveChapterGroupPageProgress(int& currentPage, int& pageCount, float& chapterProgress,
                                        bool& pageCountEstimated) const;
