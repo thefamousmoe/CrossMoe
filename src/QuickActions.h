@@ -63,7 +63,7 @@ inline constexpr std::array<StrId, CrossPointSettings::QUICK_ACTION_SLOT_ACTION_
 
 // Shared display order for shortcut pickers. The values remain the persisted
 // SHORT_PWRBTN IDs; only their presentation order is centralized here.
-inline constexpr std::array<CrossPointSettings::SHORT_PWRBTN, 39> shortcutActionOrder = {
+inline constexpr std::array<CrossPointSettings::SHORT_PWRBTN, 40> shortcutActionOrder = {
     CrossPointSettings::IGNORE,
     CrossPointSettings::SLEEP,
     CrossPointSettings::PAGE_TURN,
@@ -74,6 +74,7 @@ inline constexpr std::array<CrossPointSettings::SHORT_PWRBTN, 39> shortcutAction
     CrossPointSettings::ZOOM_IMAGE,
     CrossPointSettings::SEARCH_BOOK,
     CrossPointSettings::TOGGLE_BOOKMARK,
+    CrossPointSettings::VIEW_BOOKMARKS,
     CrossPointSettings::READING_STATS,
     CrossPointSettings::MARK_FINISHED,
     CrossPointSettings::FORCE_REFRESH,
@@ -112,7 +113,7 @@ inline bool isActionAvailable(const uint8_t action) {
   if (action == CrossPointSettings::PREVIOUS_PAGE || action == CrossPointSettings::NEARBY_POSITION_SYNC ||
       action == CrossPointSettings::LIBRARY || action == CrossPointSettings::SELECT_CHAPTER ||
       action == CrossPointSettings::ROTATE_FLIP || action == CrossPointSettings::ZOOM_IMAGE ||
-      action == CrossPointSettings::SEARCH_BOOK)
+      action == CrossPointSettings::SEARCH_BOOK || action == CrossPointSettings::VIEW_BOOKMARKS)
     return true;
   // Needs the motion sensor (X3); hidden on devices without one.
   if (action == CrossPointSettings::TOGGLE_AUTO_ROTATE) return supportsTiltPageTurn();
@@ -153,6 +154,7 @@ inline StrId actionLabel(const uint8_t action) {
   if (action == CrossPointSettings::ZOOM_IMAGE) return StrId::STR_ZOOM_IMAGE;
   if (action == CrossPointSettings::SEARCH_BOOK) return StrId::STR_SEARCH_BOOK;
   if (action == CrossPointSettings::TOGGLE_AUTO_ROTATE) return StrId::STR_AUTO_ROTATE;
+  if (action == CrossPointSettings::VIEW_BOOKMARKS) return StrId::STR_VIEW_BOOKMARKS;
   return StrId::STR_HOME_BUTTON_LOCK;
 }
 

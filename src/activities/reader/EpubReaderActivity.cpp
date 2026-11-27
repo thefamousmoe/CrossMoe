@@ -5954,6 +5954,13 @@ void EpubReaderActivity::executeReaderQuickAction(CrossPointSettings::LONG_PRESS
         onReaderMenuConfirm(EpubReaderMenuAction::SELECT_CHAPTER);
       }
       break;
+    case CrossPointSettings::LONG_MENU_VIEW_BOOKMARKS:
+      if (epub) {
+        mappedInput.suppressNextConfirmRelease();
+        suppressPowerShortcutRelease();
+        onReaderMenuConfirm(EpubReaderMenuAction::VIEW_BOOKMARKS);
+      }
+      break;
     case CrossPointSettings::LONG_MENU_LIBRARY:
       activityManager.goToLibrary();
       break;
@@ -6003,6 +6010,9 @@ bool EpubReaderActivity::handleShortcutAction(const uint8_t rawAction) {
       return true;
     case CrossPointSettings::SHORT_PWRBTN::TOGGLE_AUTO_ROTATE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_TOGGLE_AUTO_ROTATE);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::VIEW_BOOKMARKS:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_VIEW_BOOKMARKS);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);
@@ -6114,6 +6124,9 @@ bool EpubReaderActivity::handleShortcutAction(const CrossPointSettings::SHORT_PW
       return true;
     case CrossPointSettings::SHORT_PWRBTN::TOGGLE_AUTO_ROTATE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_TOGGLE_AUTO_ROTATE);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::VIEW_BOOKMARKS:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_VIEW_BOOKMARKS);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);
@@ -6828,6 +6841,9 @@ bool EpubReaderActivity::executeShortPowerButtonAction() {
     case CrossPointSettings::SHORT_PWRBTN::TOGGLE_AUTO_ROTATE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_TOGGLE_AUTO_ROTATE);
       return true;
+    case CrossPointSettings::SHORT_PWRBTN::VIEW_BOOKMARKS:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_VIEW_BOOKMARKS);
+      return true;
     case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);
       return true;
@@ -6952,6 +6968,9 @@ bool EpubReaderActivity::executeLongPowerButtonAction() {
       return true;
     case CrossPointSettings::SHORT_PWRBTN::TOGGLE_AUTO_ROTATE:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_TOGGLE_AUTO_ROTATE);
+      return true;
+    case CrossPointSettings::SHORT_PWRBTN::VIEW_BOOKMARKS:
+      executeReaderQuickAction(CrossPointSettings::LONG_MENU_VIEW_BOOKMARKS);
       return true;
     case CrossPointSettings::SHORT_PWRBTN::SEARCH_BOOK:
       executeReaderQuickAction(CrossPointSettings::LONG_MENU_SEARCH_BOOK);

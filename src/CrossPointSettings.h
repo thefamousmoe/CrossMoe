@@ -318,6 +318,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     SEARCH_BOOK = 42,
     // Turn auto-rotate off, or back on in the mode it last used (readers only).
     TOGGLE_AUTO_ROTATE = 43,
+    // Open the book's bookmark list (EPUB reader only).
+    VIEW_BOOKMARKS = 44,
     SHORT_PWRBTN_COUNT
   };
 
@@ -462,6 +464,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     LONG_MENU_ZOOM_IMAGE = 30,
     LONG_MENU_SEARCH_BOOK = 31,
     LONG_MENU_TOGGLE_AUTO_ROTATE = 32,
+    LONG_MENU_VIEW_BOOKMARKS = 33,
     LONG_PRESS_MENU_ACTION_COUNT
   };
 
