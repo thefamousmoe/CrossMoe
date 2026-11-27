@@ -292,8 +292,6 @@ class EpubReaderActivity final : public Activity {
   std::vector<std::string> searchTokens;
   std::string searchText;
   bool searchHighlightActive = false;
-  // Confirm hides the Back/Prev/Next hints so the status bar shows again.
-  bool searchHintsHidden = false;
   // Where the reader was when the search started. Back from a match reopens
   // the results list; Back from that list returns here.
   struct SearchOrigin {

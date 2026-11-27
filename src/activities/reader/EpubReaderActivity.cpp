@@ -3916,10 +3916,12 @@ void EpubReaderActivity::loop() {
     return;
   }
 
-  // After a Search Book jump, Confirm hides or shows the search hints instead
-  // of opening the reader menu. A configured long press is handled above.
+  // After a Search Book jump, Confirm ("Stay") ends the search and keeps
+  // reading on this page instead of opening the reader menu. A configured
+  // long press is handled above.
   if (!endOfBookMenuOpen && confirmReleased && searchHighlightActive) {
-    searchHintsHidden = !searchHintsHidden;
+    LOG_INF("ERS", "Search: staying on this page");
+    endSearchMode();
     requestUpdate();
     return;
   }
@@ -6341,7 +6343,6 @@ void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match, const s
   searchText = text;
   SearchText::tokens(searchText, searchTokens);
   searchHighlightActive = !searchTokens.empty();
-  searchHintsHidden = false;
   const int selected = searchSelection.selected;
   if (selected >= 0 && selected < static_cast<int>(searchSelection.hits.size())) {
     jumpToSearchHit(selected);
@@ -6405,7 +6406,6 @@ void EpubReaderActivity::endSearchMode() {
   searchOrigin.valid = false;
   if (!searchHighlightActive && searchSelection.hits.empty() && searchSelection.listHits.empty()) return;
   searchHighlightActive = false;
-  searchHintsHidden = false;
   searchTokens.clear();
   searchText.clear();
   // Release the match list's heap; it is rebuilt by the next search.
@@ -6499,23 +6499,38 @@ void EpubReaderActivity::drawSearchHighlights(const Page& page, const int fontId
     });
   }
 
-  // Match counter in the top-right corner, e.g. "3/17".
-  char counter[16];
-  snprintf(counter, sizeof(counter), "%d/%u", searchSelection.selected + 1,
+  // Search line across the top margin, in place of the status bar while the
+  // Back/Stay/Prev/Next hints use the bottom: which match this is on the left,
+  // and where the page is (chapter page and book percent) on the right.
+  int viewTop = 0, viewRight = 0, viewBottom = 0, viewLeft = 0;
+  renderer.getOrientedViewableTRBL(&viewTop, &viewRight, &viewBottom, &viewLeft);
+  char matchLabel[32];
+  snprintf(matchLabel, sizeof(matchLabel), tr(STR_SEARCH_MATCH_FORMAT), searchSelection.selected + 1,
            static_cast<unsigned>(searchSelection.hits.size()));
-  const int screenW = renderer.getScreenWidth();
-  const int badgeW = renderer.getTextWidth(UI_10_FONT_ID, counter) + 12;
-  const int badgeH = renderer.getLineHeight(UI_10_FONT_ID) + 6;
-  const int badgeX = screenW - badgeW - 4;
-  const int badgeY = std::max(4, orientedMarginTop - badgeH - 2);
-  renderer.fillRect(badgeX, badgeY, badgeW, badgeH, false);
-  renderer.drawRect(badgeX, badgeY, badgeW, badgeH, true);
-  renderer.drawText(UI_10_FONT_ID, badgeX + 6, badgeY + 3, counter, true);
+  char placeLabel[48] = {};
+  if (section) {
+    int chapterPage = section->currentPage + 1;
+    int chapterPageCount = section->estimatedTotalPages();
+    float chapterProgress = 0.0f;
+    bool estimated = false;
+    resolveChapterGroupPageProgress(chapterPage, chapterPageCount, chapterProgress, estimated);
+    const int bookPercent = std::clamp(static_cast<int>(std::lround(getCurrentBookProgressPercent())), 0, 100);
+    snprintf(placeLabel, sizeof(placeLabel), tr(STR_SEARCH_PLACE_FORMAT), chapterPage, chapterPageCount, bookPercent);
+  }
+  const int lineH = renderer.getLineHeight(UI_10_FONT_ID) + 6;
+  const int lineLeft = viewLeft + 4;
+  const int lineRight = renderer.getScreenWidth() - viewRight - 4;
+  const int lineY = std::max(viewTop + 2, orientedMarginTop - lineH - 2);
+  renderer.fillRect(lineLeft, lineY, lineRight - lineLeft, lineH, false);
+  renderer.drawLine(lineLeft, lineY + lineH - 1, lineRight - 1, lineY + lineH - 1, true);
+  renderer.drawText(UI_10_FONT_ID, lineLeft + 2, lineY + 3, matchLabel, true);
+  if (placeLabel[0] != '\0') {
+    const int placeW = renderer.getTextWidth(UI_10_FONT_ID, placeLabel);
+    renderer.drawText(UI_10_FONT_ID, lineRight - placeW - 2, lineY + 3, placeLabel, true);
+  }
 
   // What the buttons do while a match is showing (see handleSearchModeInput()).
-  // Hidden with Confirm so the status bar can show; Confirm shows them again.
-  if (searchHintsHidden) return;
-  const auto labels = mappedInput.mapLabels(mappedInput.withBackArrow(tr(STR_BACK)), tr(STR_HIDE),
+  const auto labels = mappedInput.mapLabels(mappedInput.withBackArrow(tr(STR_BACK)), tr(STR_STAY),
                                             tr(STR_SEARCH_PREV_MATCH), tr(STR_SEARCH_NEXT_MATCH));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
@@ -9211,9 +9226,9 @@ void EpubReaderActivity::drawClippingHighlights(const Page& page, const int font
 }
 
 void EpubReaderActivity::renderStatusBar() const {
-  // While a search match is showing, its Done/Prev/Next hints use that space
-  // unless they have been hidden with Confirm.
-  if (!statusBarVisible || (searchHighlightActive && !searchHintsHidden)) {
+  // While a search match is showing, its Back/Stay/Prev/Next hints use the
+  // bottom and the search line (drawSearchHighlights()) replaces the bars.
+  if (!statusBarVisible || searchHighlightActive) {
     return;
   }
 

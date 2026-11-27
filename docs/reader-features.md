@@ -257,15 +257,17 @@ like looking up a character in an X-Ray panel. Open it from the Reader Menu's
    (over two lines when needed, so the word always shows), its chapter, and
    its position in the book. Choose one to jump there.
 5. On that page the match is boxed (only that one, even if the words appear
-   more than once on the page) and a counter such as **3/17** shows in the
-   top-right corner. **Left** and **Right** jump to the previous and next match
-   anywhere in the book; the button hints show **Prev** and **Next**. While
-   the hints show, the status bar is hidden; press **Confirm** (**Hide**) to
-   hide the hints and see the status bar, and **Confirm** again to bring them
-   back.
-6. Press **Back** to return to the results list and pick another passage.
-   Press **Back** again on the list to leave the search and return to the page
-   you started from.
+   more than once on the page). A line across the top shows which match this
+   is (for example **Match 3/17**) on the left, and where you are on the
+   right: the chapter page and how far through the book. It takes the status
+   bar's place while the search buttons are showing. **Left** and **Right**
+   (**Prev** and **Next**) jump to the previous and next match anywhere in the
+   book.
+6. **Back** returns to the results list to pick another passage. **Back**
+   again on the list leaves the search and returns to the page you started
+   from.
+7. **Confirm** (**Stay**) leaves the search and keeps reading from the page
+   you are on, with the normal status bar back.
 
 Matching ignores letter case and only matches whole words, so searching
 "Vin" finds "Vin" and "Vin's" but not "Vindication". The first 200 matches are
