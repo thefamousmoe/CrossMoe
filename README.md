@@ -62,11 +62,10 @@ See [Reader Features](./docs/reader-features.md) for the full details.
 
 ## Installation
 
-CrossMoe has no releases. Firmware is built by GitHub Actions each time the `release/zoom-search` branch changes.
+1. Download **`firmware-x3-x4.bin`** from the latest release on the [Releases page](../../releases/latest).
+2. Connect the reader to your computer with a USB cable and flash the file with Inky, CrossInk's web flasher: https://inky.crossink.dev/#flash-tools (choose the custom `.bin` option).
 
-1. Open the [Actions tab](../../actions/workflows/release_candidate.yml) and pick the newest run with a green check.
-2. Under **Artifacts**, download **firmware-x3-x4** and unzip it. You need to be signed in to GitHub, and artifacts are deleted after 90 days.
-3. Connect the reader to your computer with a USB cable and flash the `.bin` file with Inky, CrossInk's web flasher: https://inky.crossink.dev/#flash-tools
+Development builds of newer changes are made by GitHub Actions each time the `release/zoom-search` branch changes: open the [Actions tab](../../actions/workflows/release_candidate.yml), pick the newest green run, and download **firmware-x3-x4** under **Artifacts** (sign-in required; artifacts expire after 90 days).
 
 [Installation](./docs/installation.md) has step-by-step flashing and revert instructions. They are written for CrossInk but work the same here. To go back to stock CrossInk, flash a firmware file from the [CrossInk releases page](https://github.com/uxjulia/CrossInk/releases).
 
