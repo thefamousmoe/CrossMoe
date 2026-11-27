@@ -459,7 +459,6 @@ class EpubReaderActivity final : public Activity {
   void releaseGrayscaleStripScratch(bool force = false);
   void drawClippingHighlights(const Page& page, int fontId, int orientedMarginTop, int orientedMarginLeft) const;
   void renderStatusBar() const;
-  void renderStatusBarContents() const;
   int fitSearchPageWindow(Page& page, int fontId, int layoutMarginTop) const;
   bool selectedSearchMatchWords(const Page& page, std::pair<uint16_t, uint16_t>& range) const;
   bool searchMatchBand(const Page& page, int fontId, int& top, int& bottom) const;
@@ -600,7 +599,6 @@ class EpubReaderActivity final : public Activity {
   void returnFromJump();
   void trackJumpLanding();
   bool jumpReturnShowing() const;
-  void drawJumpReturnHint() const;
   void jumpToSearchResult(const BookmarkResult& match, const std::string& text);
   void jumpToSearchHit(int index);
   bool handleSearchModeInput(bool backReleased);

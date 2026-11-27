@@ -6424,23 +6424,6 @@ void EpubReaderActivity::returnFromJump() {
   requestUpdate();
 }
 
-void EpubReaderActivity::drawJumpReturnHint() const {
-  if (!jumpReturnShowing()) return;
-  // A small note in the bottom corner: the reader has no button hints on a
-  // page, so this says what Back will do on this one page.
-  char text[64];
-  snprintf(text, sizeof(text), "%s %s", tr(STR_ARROW_LEFT), tr(STR_BACK_TO_WHERE_YOU_WERE));
-  int top = 0, right = 0, bottom = 0, left = 0;
-  renderer.getOrientedViewableTRBL(&top, &right, &bottom, &left);
-  const int lineH = renderer.getLineHeight(SMALL_FONT_ID);
-  const int width = renderer.getTextWidth(SMALL_FONT_ID, text);
-  const int x = left + 6;
-  const int y = renderer.getScreenHeight() - bottom - lineH - 4;
-  renderer.fillRect(x - 4, y - 2, width + 8, lineH + 4, false);
-  renderer.drawRect(x - 4, y - 2, width + 8, lineH + 4, true);
-  renderer.drawText(SMALL_FONT_ID, x, y, text, true);
-}
-
 void EpubReaderActivity::jumpToSearchResult(const BookmarkResult& match, const std::string& text) {
   searchText = text;
   SearchText::tokens(searchText, searchTokens);
@@ -9413,11 +9396,6 @@ void EpubReaderActivity::drawClippingHighlights(const Page& page, const int font
 }
 
 void EpubReaderActivity::renderStatusBar() const {
-  renderStatusBarContents();
-  drawJumpReturnHint();
-}
-
-void EpubReaderActivity::renderStatusBarContents() const {
   if (!statusBarVisible) {
     return;
   }
