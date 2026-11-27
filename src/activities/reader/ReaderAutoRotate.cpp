@@ -57,6 +57,10 @@ struct State {
   bool lastAutoWasSideways = false;
   unsigned long lastAutoMs = 0;
   uint8_t lastMode = 0xFF;  // mode on the previous poll; 0xFF right after a reset
+  // Orientation that matches how the device is actually held, or -1 when not
+  // known. Differs from the page when Sideways shows portrait for an
+  // upside-down hold; turns are worked out from this, not from the page.
+  int heldOrientation = -1;
 };
 State state;
 
@@ -129,6 +133,7 @@ void onReaderEnter() {
   state.lastAutoWasSideways = false;
   state.lastOpenTurnMs = 0;
   state.lastMode = 0xFF;
+  state.heldOrientation = -1;
 }
 
 int poll(const uint8_t currentOrientation) {
@@ -153,6 +158,7 @@ int poll(const uint8_t currentOrientation) {
     state.trustPairing = false;
     state.lastAutoWasSideways = false;
     state.lastOpenTurnMs = 0;
+    state.heldOrientation = -1;
   }
 
   // Someone other than auto-rotate changed the orientation (menu, button). The
@@ -182,6 +188,7 @@ int poll(const uint8_t currentOrientation) {
     // A by-hand choice may not follow gravity (reading lying down), so button
     // presses after it do not teach the upright position.
     state.trustPairing = false;
+    state.heldOrientation = currentOrientation;
     halTiltSensor.resetAutoRotate(HalTiltSensor::AUTO_ANCHOR_AFTER_MANUAL_MS);
   }
   state.lastOrientation = currentOrientation;
@@ -197,13 +204,16 @@ int poll(const uint8_t currentOrientation) {
       state.checkOpenPosition = false;
       if (state.offset == NO_OFFSET) {
         state.trustPairing = true;  // nothing learned yet: assume upright, as before
+        state.heldOrientation = currentOrientation;
       } else {
-        const uint8_t target = allowedOrientation(mode, orientationForZone(state.offset, openZone, state.mirrored));
+        const uint8_t held = orientationForZone(state.offset, openZone, state.mirrored);
+        state.heldOrientation = held;
+        const uint8_t target = allowedOrientation(mode, held);
         const uint8_t steps = static_cast<uint8_t>((target + 4 - currentOrientation) % 4);
         const bool allowed = steps == 2 || allowsSideways(mode);
         state.trustPairing = target == currentOrientation || allowed;
         if (target != currentOrientation && allowed) {
-          LOG_INF("ROT", "Opened held in zone %u: %u -> %u", openZone, currentOrientation, target);
+          LOG_INF("ROT", "Opened held in zone %u (as %u): %u -> %u", openZone, held, currentOrientation, target);
           state.lastOpenTurnMs = millis() | 1;  // never 0, which means "none"
           state.lastOrientation = target;
           return target;
@@ -213,11 +223,16 @@ int poll(const uint8_t currentOrientation) {
   } else if (readingZone != AutoRotateDetector::NO_ZONE && (state.trustPairing || state.offset == NO_OFFSET)) {
     // A button press while reading: the page is upright for how the device is
     // held. Remember that link for the next book opened.
-    const uint8_t offset = uprightOffset(currentOrientation, readingZone, state.mirrored);
+    // Learn from how the device is held, which differs from the page only
+    // while Sideways shows portrait for an upside-down hold.
+    const uint8_t heldNow = state.heldOrientation >= 0 && allowsSideways(mode)
+                                ? static_cast<uint8_t>(state.heldOrientation)
+                                : currentOrientation;
+    const uint8_t offset = uprightOffset(heldNow, readingZone, state.mirrored);
     if (offset != state.offset) {
       state.offset = offset;
       saveMirror();
-      LOG_INF("ROT", "Learned upright position: zone %u shows orientation %u", readingZone, currentOrientation);
+      LOG_INF("ROT", "Learned upright position: zone %u shows orientation %u", readingZone, heldNow);
     }
     state.trustPairing = true;
   }
@@ -225,12 +240,26 @@ int poll(const uint8_t currentOrientation) {
   const uint8_t turns = halTiltSensor.takeAutoRotateTurns();
   if (turns == 0) return -1;
 
-  const uint8_t target = allowedOrientation(mode, orientationAfterTurns(currentOrientation, turns, state.mirrored));
+  // Where the device is now held. With sideways turns allowed, follow the
+  // held position (not the page, which Sideways may have kept in portrait) and,
+  // once the upright position is learned, read it straight from the sensor's
+  // resting zone so the result never drifts from the open check's answer.
+  uint8_t held = orientationAfterTurns(currentOrientation, turns, state.mirrored);
+  if (allowsSideways(mode)) {
+    const uint8_t zone = halTiltSensor.autoRotateAnchorPosition();
+    if (state.offset != NO_OFFSET && zone != AutoRotateDetector::NO_ZONE) {
+      held = orientationForZone(state.offset, zone, state.mirrored);
+    } else if (state.heldOrientation >= 0) {
+      held = orientationAfterTurns(static_cast<uint8_t>(state.heldOrientation), turns, state.mirrored);
+    }
+    state.heldOrientation = held;
+  }
+  const uint8_t target = allowedOrientation(mode, held);
   if (target == currentOrientation) {
-    LOG_INF("ROT", "Auto-rotate %u turn(s) kept: Sideways never shows portrait upside down", turns);
+    LOG_INF("ROT", "Auto-rotate %u turn(s): held as %u, page stays %u", turns, held, currentOrientation);
     return -1;
   }
-  LOG_INF("ROT", "Auto-rotate %u -> %u (%u quarter turns)", currentOrientation, target, turns);
+  LOG_INF("ROT", "Auto-rotate %u -> %u (%u quarter turns, held as %u)", currentOrientation, target, turns, held);
   state.lastAutoOrientation = target;
   state.lastAutoWasSideways = turns != 2;
   state.lastAutoMs = millis();
