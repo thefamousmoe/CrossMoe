@@ -283,6 +283,16 @@ Chapter**. It works in EPUB and XTC books that have a chapter list. You can also
 give **Select Chapter** to a button, a Quick Actions slot, or a touch gesture to
 open the list directly. See [Controls](./controls.md).
 
+## Back After A Jump
+
+In EPUB books, after jumping somewhere with **Select Chapter**, a bookmark, or
+**Go to %**, a small **« Back to where you were** note shows in the bottom
+corner. Press **Back** on that page to return to the page you jumped from, for
+example after checking a map or a list of characters. Turn the page instead and
+the reader takes it that you are reading on from there: the note goes away and
+Back works as usual again. Jumping again from the page you landed on still
+returns to where you first started.
+
 ## Guide Dots
 
 Guide Dots adds small dots between words. The idea comes from speed-reading guidance where focusing on the space between words can help peripheral vision pick up more of the surrounding text.
