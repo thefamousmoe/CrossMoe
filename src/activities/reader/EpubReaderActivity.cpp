@@ -3915,6 +3915,14 @@ void EpubReaderActivity::loop() {
     return;
   }
 
+  // After a Search Book jump, Confirm hides or shows the search hints instead
+  // of opening the reader menu. A configured long press is handled above.
+  if (!endOfBookMenuOpen && confirmReleased && searchHighlightActive) {
+    searchHintsHidden = !searchHintsHidden;
+    requestUpdate();
+    return;
+  }
+
   // Enter reader menu activity.
   if (!endOfBookMenuOpen && (confirmReleased || ReaderUtils::isTouchMenuGesture(mappedInput))) {
     openReaderMenu();
@@ -6312,13 +6320,6 @@ bool EpubReaderActivity::handleSearchModeInput(const bool backReleased) {
   if (backReleased && mappedInput.getHeldTime() < ReaderUtils::GO_HOME_MS) {
     // Back leaves the highlight and keeps reading here.
     endSearchMode();
-    requestUpdate();
-    return true;
-  }
-  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm) &&
-      mappedInput.getHeldTime() < ReaderUtils::GO_HOME_MS) {
-    // Confirm hides or shows the hints; hidden, the status bar shows instead.
-    searchHintsHidden = !searchHintsHidden;
     requestUpdate();
     return true;
   }
