@@ -34,7 +34,7 @@ add_executable(BookmarkSyncTest BookmarkSyncTest.cpp
   ${REPO_ROOT}/src/BookmarkStore.cpp ${REPO_ROOT}/src/sync/SyncFiles.cpp
   ${REPO_ROOT}/lib/SyncLog/SyncLog.cpp ${REPO_ROOT}/lib/Serialization/AtomicFile.cpp
   ${REPO_ROOT}/lib/uzlib/src/uzlib_checksums.c)
-target_include_directories(BookmarkSyncTest PRIVATE bookmark_stubs transport_stubs stubs ${REPO_ROOT}/lib/SyncLog
+target_include_directories(BookmarkSyncTest PRIVATE bookmark_stubs transport_stubs stubs ${REPO_ROOT}/lib/SyncLog ${REPO_ROOT}/lib/FsHelpers
   ${REPO_ROOT}/src ${REPO_ROOT}/src/network ${REPO_ROOT}/lib/Memory
   ${REPO_ROOT}/lib/Serialization ${REPO_ROOT}/lib/uzlib/src)
 target_link_libraries(BookmarkSyncTest PRIVATE crosspoint_test_common GTest::gtest_main ArduinoJson)
