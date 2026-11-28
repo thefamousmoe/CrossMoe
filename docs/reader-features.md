@@ -232,12 +232,15 @@ the picture only scrolls one way, the labels change to match (for example
 **Up**/**Down** on the front buttons).
 
 The first time you open each zoom level, the viewer shows **Loading** while it
-decodes the whole picture in shades of gray and saves it to a temporary file
-on the SD card. Moving around that level then reads straight from the file, so
-pans are quick and look as sharp as the page. Every new view starts with a
-clean screen refresh so the previous view does not show through. The temporary
-files are deleted when you leave the viewer. If a level's file can't be
-written, the viewer stays on the previous level.
+decodes the whole picture in shades of gray and saves a copy to the book's
+cache folder on the SD card. Moving around that level then reads straight from
+the copy, so pans are quick and look as sharp as the page. Every new view
+starts with a clean screen refresh so the previous view does not show through.
+The copies are kept, so opening the same picture again (a map you keep
+checking, say) skips **Loading**. They are removed with the rest of the book's
+cache: when the book is deleted, or with Delete Book Cache or Clear Reading
+Cache. If a level's copy can't be written, the viewer stays on the previous
+level.
 
 JPEG and PNG pictures can be zoomed; other formats are shown fitted to the
 screen.

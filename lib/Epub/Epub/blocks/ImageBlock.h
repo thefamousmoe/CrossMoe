@@ -45,6 +45,8 @@ class ImageBlock final : public Block {
   // into a 2-bit gray file on the SD card, then draw any screen-sized window of
   // it without decoding again.
   bool buildZoomCache(GfxRenderer& renderer, const std::string& cachePath, int drawWidth, int drawHeight) const;
+  // True when a complete zoom copy of this size is already on the SD card.
+  static bool hasZoomCache(const std::string& cachePath, int drawWidth, int drawHeight);
   static bool renderZoomCache(GfxRenderer& renderer, const std::string& cachePath, int x, int y, int drawWidth,
                               int drawHeight);
   // Pixel size of the original picture, for capping zoom at its real detail.

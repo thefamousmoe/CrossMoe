@@ -6,6 +6,10 @@
 - Back after a jump: after jumping with Select Chapter, a bookmark, or Go to %, Back on the page you landed on returns to where you were (for checking a map, say) instead of leaving the book. Turning the page keeps you there and Back works as usual.
 - View Bookmarks can be set as a Quick Action or on a button (short or long press) to open a book's bookmark list straight from the page.
 
+### Changed
+
+- Zoom Image keeps each zoom level's copy of a picture in the book's cache instead of deleting it on exit, so reopening the same picture (a map you keep checking, say) skips the Loading step. The copies are removed with the book or its cache.
+
 ### Fixed
 
 - Test helpers for bookmark and clipping sync build with newer compilers (missing standard header and include path).

@@ -48,10 +48,8 @@ void ImageZoomActivity::onEnter() {
 }
 
 void ImageZoomActivity::onExit() {
-  // The cached levels are only useful while this picture is open; free the SD space.
-  for (int level = 1; level <= MAX_ZOOM; ++level) {
-    if (cacheReady[level] && !cachePaths[level].empty()) Storage.remove(cachePaths[level].c_str());
-  }
+  // Zoom copies stay in the book's cache folder so reopening this picture
+  // skips the decode. They are removed with the book or its cache.
   Activity::onExit();
 }
 
@@ -220,6 +218,13 @@ bool ImageZoomActivity::ensureZoomCache(const int width, const int height) {
   if (cacheFailed[zoom] && cachePaths[zoom] == path) return false;
 
   cachePaths[zoom] = path;
+  // Kept from an earlier visit: no decode needed.
+  if (ImageBlock::hasZoomCache(path, width, height)) {
+    cacheReady[zoom] = true;
+    cacheFailed[zoom] = false;
+    LOG_INF("ZOOM", "%dx copy reused (%dx%d)", zoom, width, height);
+    return true;
+  }
   // Decoding the whole level takes a few seconds once; later moves reuse it.
   // Drawn into the framebuffer for real (no backdrop restore) so the next
   // refresh compares against what the panel actually shows.

@@ -736,6 +736,22 @@ bool ImageBlock::buildZoomCache(GfxRenderer& renderer, const std::string& cacheP
   return true;
 }
 
+bool ImageBlock::hasZoomCache(const std::string& cachePath, const int drawWidth, const int drawHeight) {
+  if (!Storage.exists(cachePath.c_str())) return false;
+  FsFile cacheFile;
+  if (!Storage.openFileForRead("IMG", cachePath, cacheFile)) return false;
+  uint16_t cachedWidth = 0;
+  uint16_t cachedHeight = 0;
+  const bool valid = readValidCacheHeader(cacheFile, drawWidth, drawHeight, cachedWidth, cachedHeight);
+  cacheFile.close();
+  if (!valid) {
+    // A copy cut short (power loss mid-build) or from another size: rebuild it.
+    LOG_INF("IMG", "Discarding unusable zoom copy: %s", cachePath.c_str());
+    Storage.remove(cachePath.c_str());
+  }
+  return valid;
+}
+
 bool ImageBlock::renderZoomCache(GfxRenderer& renderer, const std::string& cachePath, const int x, const int y,
                                  const int drawWidth, const int drawHeight) {
   return renderFromCache(renderer, cachePath, x, y, drawWidth, drawHeight, /*imageGrayscale=*/true);
