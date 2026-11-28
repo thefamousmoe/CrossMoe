@@ -1,9 +1,18 @@
-## [Unreleased]
+## [CrossMoe 1.2.0] - 2026-11-28
 
 ### Added
 
-- View Bookmarks can be set as a Quick Action or on a button (short or long press) to open a book's bookmark list straight from the page.
+- Sync on Sleep (Settings > System > Sync Server) uploads the open EPUB's progress to your KOReader sync server when the reader goes to sleep, by power button or timeout. It only moves the server forward, and compatible servers also get bookmarks, clippings, and reading sessions. Adapted from CrossInk's development branch (CrossPoint #4531).
 - Back after a jump: after jumping with Select Chapter, a bookmark, or Go to %, Back on the page you landed on returns to where you were (for checking a map, say) instead of leaving the book. Turning the page keeps you there and Back works as usual.
+- View Bookmarks can be set as a Quick Action or on a button (short or long press) to open a book's bookmark list straight from the page.
+
+### Fixed
+
+- Test helpers for bookmark and clipping sync build with newer compilers (missing standard header and include path).
+
+## [CrossMoe 1.2.0-rc.1] - 2026-11-27 (test build)
+
+- Test build of Sync on Sleep on top of 1.1.0; everything in it is part of 1.2.0.
 
 ## [CrossMoe 1.1.0] - 2026-11-27
 
